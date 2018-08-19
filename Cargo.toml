@@ -1,0 +1,10 @@
+[package]
+name = "aurora"
+version = "0.1.0"
+authors = ["DevOrc <ncharlton002@gmail.com>"]
+
+[[bin]]
+name = "bin"
+path = "src/main.rs"
+
+[dependencies]
