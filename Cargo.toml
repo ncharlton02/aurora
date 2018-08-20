@@ -2,6 +2,9 @@
 name = "aurora"
 version = "0.1.0"
 authors = ["DevOrc <ncharlton002@gmail.com>"]
+repository = "https://github.com/DevOrc/aurora"
+readme = "README.md"
+license = "MIT"
 
 [[bin]]
 name = "bin"
