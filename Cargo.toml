@@ -11,3 +11,4 @@ name = "bin"
 path = "src/main.rs"
 
 [dependencies]
+clap = "2.32.0"

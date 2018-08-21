@@ -45,7 +45,7 @@ pub enum StmtType{
 pub fn run(src: String) -> LuaResult{
     let tokens = scanner::scan(src);
     print_token_info(&tokens);
-    println!("\n");
+    println!("");
 
     let mut stmts = parser::parse(tokens);
     print_stmt_info(&stmts);
