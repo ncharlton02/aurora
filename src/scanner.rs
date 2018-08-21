@@ -38,8 +38,7 @@ impl Scanner{
                 '"' => Token::StringLiteral(String::new()),
                 x if x.is_alphabetic() => Token::Identifier(String::new()),
                 x => {
-                    println!("Unknown Character: {}", x); 
-                    Token::Unknown 
+                    panic!("Unknown Character: {}", x); 
                 }
             }
         }else{
@@ -78,16 +77,16 @@ impl Scanner{
 
     fn scan_identifier(&mut self) -> Token{
         let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
-        let stop_chars = vec![' ', '\n', '\t', '('];
+        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'(')];
 
         loop{
+            if stop_chars.contains(&self.peek()){
+                break;
+            }
+
             let character_option = self.advance_character();
 
             if let Some(c) = character_option{
-                if stop_chars.contains(c){
-                    break;
-                }
-
                 char_vec.push(*c);   
             }else{
                 return Token::EOF;
@@ -100,6 +99,10 @@ impl Scanner{
 
     fn char_at(&self, i: usize) -> Option<&char>{
         self.src.get(i)
+    }
+
+    fn peek(&self) -> Option<&char>{
+        self.char_at(self.curr)
     }
 
     fn advance_character(&mut self) -> Option<&char>{
