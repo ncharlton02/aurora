@@ -33,22 +33,28 @@ impl Scanner{
     fn scan_token(&mut self) -> Token{
         let token = if let Some(c) = self.advance_character(){
             match c {
-                '(' => Token::LeftParenthesis,
-                ')' => Token::RightParenthesis,
-                '"' => Token::StringLiteral(String::new()),
-                x if x.is_alphabetic() => Token::Identifier(String::new()),
+                '(' => Some(Token::LeftParenthesis),
+                ')' => Some(Token::RightParenthesis),
+                '"' => Some(Token::StringLiteral(String::new())),
+                '\n' => Some(Token::Newline),
+                ' ' | '\t' | '\r' => None,
+                x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 x => {
                     panic!("Unknown Character: {}", x); 
                 }
             }
         }else{
-            Token::EOF
+            Some(Token::EOF)
         };
 
-        let token = match token{
-            Token::StringLiteral(_) => self.scan_string(),
-            Token::Identifier(_) => self.scan_identifier(),
-            x => x
+        let token = if let Some(token) = token{
+            match token{
+                Token::StringLiteral(_) => self.scan_string(),
+                Token::Identifier(_) => self.scan_identifier(),
+                x => x
+            }
+        }else{
+            self.scan_token()
         };
 
         token

@@ -15,6 +15,7 @@ pub enum Token{
     StringLiteral(String),
     LeftParenthesis,
     RightParenthesis,
+    Newline,
     EOF 
 }
 
@@ -61,7 +62,7 @@ fn print_stmt_info(stmts: &Vec<Stmt>){
     println!("Stmt Count: {}", stmts.len());
 
     for stmt in stmts{
-        println!("{:?}", stmt);
+        println!("{:#?}", stmt);
     }
 }
 

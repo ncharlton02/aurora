@@ -50,6 +50,7 @@ impl Parser{
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
             },
+            Token::Newline => self.scan_stmt(),
             Token::EOF => return Stmt {stmt_type : StmtType::EOF, tokens: vec![token]},
         }
     }
@@ -72,7 +73,7 @@ impl Parser{
             let token = self.next_token();
 
             if let Some(token) = token{
-                if token == Token::EOF{
+                if token == Token::EOF || token == Token::Newline{
                     break;
                 }
 
