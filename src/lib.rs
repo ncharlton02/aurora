@@ -1,6 +1,7 @@
 
 mod scanner;
 mod parser;
+mod interpreter;
 
 #[derive(Debug)]
 pub enum LuaResult{
@@ -17,6 +18,17 @@ pub enum Token{
     EOF 
 }
 
+impl Token{
+
+    pub fn can_be_arg(&self) -> bool{
+        match self{
+            Token::Identifier(_) | Token::StringLiteral(_) => true,
+            _ => false
+        }
+    }
+
+} 
+
 #[derive(Debug)]
 pub struct Stmt{
     stmt_type: StmtType,
@@ -26,7 +38,6 @@ pub struct Stmt{
 #[derive(Debug, PartialEq)]
 pub enum StmtType{
     FunctionCall,
-    Assignment,
     EOF
 }
 
@@ -36,9 +47,12 @@ pub fn run(src: String) -> LuaResult{
     print_token_info(&tokens);
     println!("\n");
 
-    let stmts = parser::parse(tokens);
+    let mut stmts = parser::parse(tokens);
     print_stmt_info(&stmts);
-    println!("\n");
+
+    println!("\n---------- Running -------");
+    interpreter::run(&mut stmts);
+    println!("---------- Finished -------");
 
     LuaResult::Successful
 }
