@@ -4,6 +4,9 @@ mod parser;
 mod interpreter;
 mod data;
 
+#[cfg(test)]
+mod test;
+
 #[derive(Debug)]
 pub enum LuaResult{
     Successful, 

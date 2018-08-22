@@ -86,6 +86,7 @@ impl Scanner{
 
     fn scan_number(&mut self) -> Token{
         let mut char_vec: Vec<char> = Vec::new();
+        self.curr -= 1;
 
         loop{
             let character = self.advance_character().unwrap_or_else(||{
