@@ -47,7 +47,8 @@ impl Parser{
 
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
-            Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) =>{ 
+            Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
+            Token::AssignmentOp | Token::NumberLiteral(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
             },
             Token::Newline => self.scan_stmt(),
@@ -56,14 +57,27 @@ impl Parser{
     }
 
     fn handle_indentifier(&mut self, token: Token) -> Stmt{
-        if self.match_next(Token::LeftParenthesis){
-            let stmt_type = StmtType::FunctionCall;
-            let tokens = self.create_token_group(token);
+        let following_token = self.next_token();
 
-            return Stmt {stmt_type, tokens};
-        } 
+        if let Some(following_token) = following_token{
+            match following_token{
+                Token::LeftParenthesis =>{
+                    let stmt_type = StmtType::FunctionCall;
+                    let tokens = self.create_token_group(token);
 
-        panic!("Unknown token following identifier: {:?}", token);
+                    return Stmt {stmt_type, tokens};
+                },
+                Token::AssignmentOp =>{
+                    let stmt_type = StmtType::Assignment;
+                    let tokens = self.create_token_group(token);
+
+                    return Stmt {stmt_type, tokens};
+                },
+                _ => panic!("Unknown token following identifier: {:?}", token),
+            }
+        }else{
+            panic!("Files cannot end with identifiers!");
+        }
     }
 
     fn create_token_group(&mut self, first: Token) -> Vec<Token>{

@@ -2,6 +2,7 @@
 mod scanner;
 mod parser;
 mod interpreter;
+mod data;
 
 #[derive(Debug)]
 pub enum LuaResult{
@@ -13,6 +14,8 @@ pub enum LuaResult{
 pub enum Token{
     Identifier(String), 
     StringLiteral(String),
+    NumberLiteral(i32),
+    AssignmentOp,
     LeftParenthesis,
     RightParenthesis,
     Newline,
@@ -39,6 +42,7 @@ pub struct Stmt{
 #[derive(Debug, PartialEq)]
 pub enum StmtType{
     FunctionCall,
+    Assignment,
     EOF
 }
 

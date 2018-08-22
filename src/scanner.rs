@@ -37,8 +37,10 @@ impl Scanner{
                 ')' => Some(Token::RightParenthesis),
                 '"' => Some(Token::StringLiteral(String::new())),
                 '\n' => Some(Token::Newline),
+                '=' => Some(Token::AssignmentOp),
                 ' ' | '\t' | '\r' => None,
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
+                n if n.is_numeric() => Some(Token::NumberLiteral(0)),
                 x => {
                     panic!("Unknown Character: {}", x); 
                 }
@@ -51,6 +53,7 @@ impl Scanner{
             match token{
                 Token::StringLiteral(_) => self.scan_string(),
                 Token::Identifier(_) => self.scan_identifier(),
+                Token::NumberLiteral(_) => self.scan_number(),
                 x => x
             }
         }else{
@@ -81,9 +84,32 @@ impl Scanner{
         Token::StringLiteral(string)
     }
 
+    fn scan_number(&mut self) -> Token{
+        let mut char_vec: Vec<char> = Vec::new();
+
+        loop{
+            let character = self.advance_character().unwrap_or_else(||{
+                &' '
+            });
+
+            if !character.is_numeric(){
+                break;
+            }
+
+            char_vec.push(*character);
+        }
+
+        let string: String = char_vec.iter().collect();
+
+        match string.parse::<i32>(){
+            Ok(n) => Token::NumberLiteral(n),
+            Err(e) => panic!("Unable to parse number literal {}: {}", string, e),
+        }
+    }
+
     fn scan_identifier(&mut self) -> Token{
         let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
-        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'(')];
+        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), Some(&')')];
 
         loop{
             if stop_chars.contains(&self.peek()){
