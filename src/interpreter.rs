@@ -30,55 +30,35 @@ impl Interpreter{
 
     pub fn run_stmt(&mut self, stmt: &mut Stmt){
         match stmt.stmt_type{
-            StmtType::FunctionCall => self.run_function_call(&mut stmt.tokens),
-            StmtType::Assignment => self.handle_assignment(&mut stmt.tokens),
+            StmtType::FunctionCall(ref name, ref args) => self.run_function_call(name, args.to_vec()),
+            StmtType::Assignment(ref name, ref tokens) => self.handle_assignment(name, tokens.to_vec()),
             StmtType::EOF => (),
         }
     }
 
-    fn handle_assignment(&mut self, tokens: &mut Vec<Token>){
-        let value = super::data::from_token(tokens.remove(1));
-
-        let name = match tokens.remove(0){
+    fn handle_assignment(&mut self, name: &Token, tokens: Vec<Token>){
+         let name = match name{
             Token::Identifier(n) => n,
-            _ => panic!("oops"),
+            _ => panic!("Illegal Token: expected identifier but found {:?}", name),
         };
 
-        self.assign_variable(name, value);
+        let value = super::data::from_token(&tokens);
+
+        self.assign_variable(name.to_string(), value);
     }
 
-    fn run_function_call(&mut self, tokens: &mut Vec<Token>){
-        let call = self.parse_function_call(tokens);
+    fn run_function_call(&mut self, name: &Token, args: Vec<Token>){        
+        let name = match name{
+            Token::Identifier(string) => string,
+            _ => panic!("Illegal Token: expected identifier but found {:?}", name),
+        };
         
-        let func = self.funcs.get(&call.name);
+        let func = self.funcs.get(name);
 
         if let Some(func) = func{
-            func(call.args, self);
+            func(args, self);
         }
     }
-    
-    fn parse_function_call(&self, tokens: &mut Vec<Token>) -> FunctionCall{
-        let name = tokens.remove(0);
-        let mut args = Vec::new();
-
-        for token in tokens{
-            if token.can_be_arg(){
-                args.push(token.clone());
-            }
-        }
-
-        let name = match name{
-            Token::Identifier(x) => x,
-             x => panic!("Unknown name token: {:?}", x),
-        };
-
-        FunctionCall{args, name}
-    }
-}
-
-struct FunctionCall{
-    args: Vec<Token>,
-    name: String
 }
 
 pub fn run(stmts: &mut Vec<Stmt>){

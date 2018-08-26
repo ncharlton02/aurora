@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, Stmt, StmtType};
+use super::{Token, Operator, Stmt, StmtType};
 
 struct Parser{
     tokens: VecDeque<Token>,
@@ -40,7 +40,7 @@ impl Parser{
         let token = self.next_token();
 
         if token == None{
-            return Stmt {stmt_type: StmtType::EOF, tokens: Vec::new()};
+            return Stmt {stmt_type: StmtType::EOF};
         }
 
         let token = token.unwrap();
@@ -48,11 +48,11 @@ impl Parser{
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
-            Token::AssignmentOp | Token::NumberLiteral(_) =>{ 
+            Token::Operator(_) | Token::NumberLiteral(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
             },
             Token::Newline => self.scan_stmt(),
-            Token::EOF => return Stmt {stmt_type : StmtType::EOF, tokens: vec![token]},
+            Token::EOF => return Stmt {stmt_type : StmtType::EOF},
         }
     }
 
@@ -62,16 +62,16 @@ impl Parser{
         if let Some(following_token) = following_token{
             match following_token{
                 Token::LeftParenthesis =>{
-                    let stmt_type = StmtType::FunctionCall;
-                    let tokens = self.create_token_group(token);
+                    let args = self.advance_to(Token::RightParenthesis);
+                    let stmt_type = StmtType::FunctionCall(token, args);
 
-                    return Stmt {stmt_type, tokens};
+                    return Stmt {stmt_type};
                 },
-                Token::AssignmentOp =>{
-                    let stmt_type = StmtType::Assignment;
-                    let tokens = self.create_token_group(token);
+                Token::Operator(Operator::Equal) =>{
+                    let args = self.advance_to(Token::Newline);
+                    let stmt_type = StmtType::Assignment(token, args);
 
-                    return Stmt {stmt_type, tokens};
+                    return Stmt {stmt_type};
                 },
                 _ => panic!("Unknown token following identifier: {:?}", token),
             }
@@ -80,24 +80,24 @@ impl Parser{
         }
     }
 
-    fn create_token_group(&mut self, first: Token) -> Vec<Token>{
-        let mut vec: Vec<Token> = vec![first];
+    fn advance_to(&mut self, stop: Token) -> Vec<Token>{
+        let mut tokens = Vec::new();
 
         loop{
             let token = self.next_token();
 
             if let Some(token) = token{
-                if token == Token::EOF || token == Token::Newline{
+                if token == stop || token == Token::EOF{
                     break;
                 }
 
-                vec.push(token);
+                tokens.push(token);
             }else{
                 break;
             }
         }
-        
-        vec
+
+        tokens
     }
 
     fn match_next(&self, token: Token) -> bool{

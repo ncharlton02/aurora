@@ -14,11 +14,20 @@ pub enum LuaResult{
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Operator{
+    Equal,
+    Plus,
+    Minus, 
+    Multiply,
+    Divide
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token{
     Identifier(String), 
     StringLiteral(String),
     NumberLiteral(i32),
-    AssignmentOp,
+    Operator(Operator),
     LeftParenthesis,
     RightParenthesis,
     Newline,
@@ -39,16 +48,16 @@ impl Token{
 #[derive(Debug)]
 pub struct Stmt{
     stmt_type: StmtType,
-    tokens: Vec<Token>
 }
 
 #[derive(Debug, PartialEq)]
 pub enum StmtType{
-    FunctionCall,
-    Assignment,
+    ///Name, Arguments
+    FunctionCall(Token, Vec<Token>),
+    ///Name, Assignment
+    Assignment(Token, Vec<Token>),
     EOF
 }
-
 
 pub fn run(src: String) -> LuaResult{
     let tokens = scanner::scan(src);
