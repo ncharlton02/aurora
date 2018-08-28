@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, Operator, Stmt, StmtType};
+use super::{Token, BinOp, Stmt, StmtType, expr};
 
 struct Parser{
     tokens: VecDeque<Token>,
@@ -67,9 +67,9 @@ impl Parser{
 
                     return Stmt {stmt_type};
                 },
-                Token::Operator(Operator::Equal) =>{
-                    let args = self.advance_to(Token::Newline);
-                    let stmt_type = StmtType::Assignment(token, args);
+                Token::Operator(BinOp::Equal) =>{
+                    let expr = expr::parse(self.advance_to(Token::Newline));
+                    let stmt_type = StmtType::Assignment(token, expr);
 
                     return Stmt {stmt_type};
                 },

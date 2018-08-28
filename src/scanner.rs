@@ -1,5 +1,5 @@
 
-use super::{Token, Operator};
+use super::{Token, BinOp};
 
 struct Scanner{
     src: Vec<char>,
@@ -37,11 +37,11 @@ impl Scanner{
                 ')' => Some(Token::RightParenthesis),
                 '"' => Some(Token::StringLiteral(String::new())),
                 '\n' => Some(Token::Newline),
-                '=' => Some(Token::Operator(Operator::Equal)),
-                '+' => Some(Token::Operator(Operator::Plus)),
-                '-' => Some(Token::Operator(Operator::Minus)),
-                '*' => Some(Token::Operator(Operator::Multiply)),
-                '/' => Some(Token::Operator(Operator::Divide)),
+                '=' => Some(Token::Operator(BinOp::Equal)),
+                '+' => Some(Token::Operator(BinOp::Plus)),
+                '-' => Some(Token::Operator(BinOp::Minus)),
+                '*' => Some(Token::Operator(BinOp::Multiply)),
+                '/' => Some(Token::Operator(BinOp::Divide)),
                 ' ' | '\t' | '\r' => None,
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 n if n.is_numeric() => Some(Token::NumberLiteral(0)),

@@ -3,6 +3,7 @@ mod scanner;
 mod parser;
 mod interpreter;
 mod data;
+mod expr;
 
 #[cfg(test)]
 mod test;
@@ -14,7 +15,8 @@ pub enum LuaResult{
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Operator{
+pub enum BinOp{
+    Concat,
     Equal,
     Plus,
     Minus, 
@@ -27,7 +29,7 @@ pub enum Token{
     Identifier(String), 
     StringLiteral(String),
     NumberLiteral(i32),
-    Operator(Operator),
+    Operator(BinOp),
     LeftParenthesis,
     RightParenthesis,
     Newline,
@@ -45,7 +47,7 @@ impl Token{
 
 } 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Stmt{
     stmt_type: StmtType,
 }
@@ -55,8 +57,24 @@ pub enum StmtType{
     ///Name, Arguments
     FunctionCall(Token, Vec<Token>),
     ///Name, Assignment
-    Assignment(Token, Vec<Token>),
+    Assignment(Token, Expr),
+    ///Operator, Left Token, Right Token
+    BinOp(BinOp, Token, Token),
+    ///A single token value
+    Value(Token),
     EOF
+}
+
+#[derive(Debug, PartialEq, Clone)]
+enum ExprType{
+    Str, Number, SingleValue
+}
+
+
+#[derive(Debug, PartialEq)]
+pub struct Expr{
+    stmts: Vec<Stmt>,
+    expr_type: ExprType
 }
 
 pub fn run(src: String) -> LuaResult{
