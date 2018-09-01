@@ -52,9 +52,7 @@ impl Interpreter{
         let stmt = expr.stmts.get(0).unwrap();
         
         match stmt.stmt_type{
-            StmtType::BinOp(ref operator, ref left, ref right) => {
-                LuaData::Number(self.evaluate_bin_op(operator, left, right))
-            },
+            StmtType::BinOp(ref operator, ref left, ref right) => self.evaluate_bin_op(operator, left, right),
             StmtType::Value(ref token) => self.evaluate_value_token(token),
             ref x => panic!("Couldn't evaluate expression: {:?}", x),
         }
@@ -75,24 +73,45 @@ impl Interpreter{
         }
     }
 
-    fn evaluate_bin_op(&self, operator: &BinOp, left: &Token, right: &Token) -> i32{   
+    fn evaluate_bin_op(&self, operator: &BinOp, left: &Token, right: &Token) -> LuaData{   
+        match operator{
+            BinOp::Concat => self.evaluate_str_binop(left, right),
+            _ => self.evaluate_num_binop(operator, left, right),
+        }
+    }
+
+    fn evaluate_num_binop(&self, operator: &BinOp, left: &Token, right: &Token) -> LuaData{
         let left_num = match left{
             Token::NumberLiteral(x) => x,
-            _ => panic!("Unimplemented!"),
+            _ => panic!("Expected number literal but found {:?}!", left),
         };
 
         let right_num = match right{
             Token::NumberLiteral(x) => x,
-            _ => panic!("Unimplemented!"),
+            _ => panic!("Expected number literal but found {:?}!", right),
         };
 
         match operator{
-            BinOp::Plus => left_num + right_num,
-            BinOp::Minus => left_num - right_num,
-            BinOp::Multiply => left_num * right_num,
-            BinOp::Divide => left_num / right_num,
-            _ => panic!("Unimplemented!"),
+            BinOp::Plus => LuaData::Number(left_num + right_num),
+            BinOp::Minus => LuaData::Number(left_num - right_num),
+            BinOp::Multiply => LuaData::Number(left_num * right_num),
+            BinOp::Divide => LuaData::Number(left_num / right_num),
+            _ => panic!("Unknown num operator: {:?}!", operator),
         }
+    }
+
+    fn evaluate_str_binop(&self, left: &Token, right: &Token) -> LuaData{
+        let left_string = match left{
+            Token::StringLiteral(x) => x,
+            _ => panic!("Expected string literal but found {:?}!", left),
+        };
+
+        let right_string = match right{
+            Token::StringLiteral(x) => x,
+            _ => panic!("Expected string literal but found {:?}!", right),
+        };
+
+        LuaData::Str(format!("{}{}", left_string, right_string))
     }
 
     fn run_function_call(&mut self, name: &Token, args: Vec<Token>){        

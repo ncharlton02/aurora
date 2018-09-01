@@ -67,12 +67,13 @@ impl ExprParser{
         }
 
         match token{
-            Token::NumberLiteral(val) => self.scan_num_literal(token),
+            Token::NumberLiteral(_) => self.scan_num_expr(token),
+            Token::StringLiteral(_) => self.scan_string_expr(token),
             _ => panic!("Unexpected token type: {:?}", token)
         }
     }
 
-    fn scan_num_literal(&mut self, left: Token) -> Stmt{
+    fn scan_num_expr(&mut self, left: Token) -> Stmt{
         let operator = match self.next_token(){
             Some(Token::Operator(operator)) => operator,
             x => panic!("Expected binary operator but found {:?}", x),
@@ -80,7 +81,21 @@ impl ExprParser{
 
         let right = match self.next_token(){
             Some(x) => x,
-            x => panic!("Expected number literal but found: {:?}", x),
+            x => panic!("Expected token but found EOF"),
+        };
+
+        Stmt{stmt_type: StmtType::BinOp(operator, left, right)}
+    }
+
+    fn scan_string_expr(&mut self, left: Token) -> Stmt{
+        let operator = match self.next_token(){
+            Some(Token::Operator(BinOp::Concat)) => BinOp::Concat,
+            x => panic!("Expected binary operator but found {:?}", x),
+        };
+
+        let right = match self.next_token(){
+            Some(x) => x,
+            x => panic!("Expected token but found EOF"),
         };
 
         Stmt{stmt_type: StmtType::BinOp(operator, left, right)}

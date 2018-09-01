@@ -42,6 +42,7 @@ impl Scanner{
                 '-' => Some(Token::Operator(BinOp::Minus)),
                 '*' => Some(Token::Operator(BinOp::Multiply)),
                 '/' => Some(Token::Operator(BinOp::Divide)),
+                '.' => Some(Token::Operator(BinOp::Concat)),  
                 ' ' | '\t' | '\r' => None,
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 n if n.is_numeric() => Some(Token::NumberLiteral(0)),
@@ -58,6 +59,7 @@ impl Scanner{
                 Token::StringLiteral(_) => self.scan_string(),
                 Token::Identifier(_) => self.scan_identifier(),
                 Token::NumberLiteral(_) => self.scan_number(),
+                Token::Operator(BinOp::Concat) => self.check_elipse(),
                 x => x
             }
         }else{
@@ -65,6 +67,20 @@ impl Scanner{
         };
 
         token
+    }
+
+    fn check_elipse(&mut self) -> Token{
+        let c = self.advance_character();
+
+        if let Some(c) = c{
+            if c != &'.'{
+                panic!("Expected ellipse, found: {}", c);
+            }
+        }else{
+            panic!("File cannot end with character '.'");
+        }
+
+        Token::Operator(BinOp::Concat)
     }
 
     fn scan_string(&mut self) -> Token{
