@@ -1,14 +1,25 @@
 
-use super::{Token, scanner};
+use std::fs;
+use std::io::prelude::*;
+use std::fs::File;
 
 #[test]
-fn scan_tests(){
-    verify_token_count(4, "print(\"Hello World!\"");
-    verify_token_count(17, "name = John\nage = 5\nprint(name)\nprint(age)")
+fn test(){
+    let paths = fs::read_dir("assets").unwrap();
+
+    for path in paths {
+        let path = path.unwrap().path();
+
+        println!("Testing file: {}", path.display());
+
+        super::run(load_file(path.display().to_string()));
+    }
 }
 
-fn verify_token_count(num: usize, src: &str){
-    let tokens = scanner::scan(src.to_string());
-
-    assert_eq!(num, tokens.len());
+fn load_file(path: String) -> String{
+    let mut file = File::open(&path).expect(&format!("Unable to open lua source file: {}", path));
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).expect("Unable to read the file");
+    
+    contents
 }
