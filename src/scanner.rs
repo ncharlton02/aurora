@@ -35,6 +35,7 @@ impl Scanner{
             match c {
                 '(' => Some(Token::LeftParenthesis),
                 ')' => Some(Token::RightParenthesis),
+                ',' => Some(Token::Comma),
                 '"' => Some(Token::StringLiteral(String::new())),
                 '\n' => Some(Token::Newline),
                 '=' => Some(Token::Operator(BinOp::Equal)),
@@ -130,7 +131,8 @@ impl Scanner{
 
     fn scan_identifier(&mut self) -> Token{
         let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
-        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), Some(&')')];
+        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), 
+            Some(&')'), Some(&',')];
 
         loop{
             if stop_chars.contains(&self.peek()){

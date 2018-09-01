@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, BinOp, Stmt, StmtType, expr};
+use super::{Token, BinOp, Stmt, StmtType, Expr, expr};
 
 struct Parser{
     tokens: VecDeque<Token>,
@@ -48,7 +48,7 @@ impl Parser{
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
-            Token::Operator(_) | Token::NumberLiteral(_) =>{ 
+            Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
             },
             Token::Newline => self.scan_stmt(),
@@ -63,7 +63,7 @@ impl Parser{
             match following_token{
                 Token::LeftParenthesis =>{
                     let args = self.advance_to(Token::RightParenthesis);
-                    let stmt_type = StmtType::FunctionCall(token, args);
+                    let stmt_type = StmtType::FunctionCall(token, self.parse_args(args));
 
                     return Stmt {stmt_type};
                 },
@@ -78,6 +78,27 @@ impl Parser{
         }else{
             panic!("Files cannot end with identifiers!");
         }
+    }
+
+    fn parse_args(&self, args: Vec<Token>) -> Vec<Expr>{
+        let mut exprs = Vec::new();
+        let mut tokens = Vec::new();
+
+        for token in args{
+            if token == Token::Comma{
+                let expr = expr::parse(tokens.clone());
+                exprs.push(expr);
+                tokens.clear();
+            }else{
+                tokens.push(token);
+            }
+        }
+
+        //Parse the last argument
+        let expr = expr::parse(tokens);
+        exprs.push(expr);
+
+        exprs
     }
 
     fn advance_to(&mut self, stop: Token) -> Vec<Token>{

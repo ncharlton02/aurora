@@ -33,6 +33,7 @@ pub enum Token{
     LeftParenthesis,
     RightParenthesis,
     Newline,
+    Comma,
     EOF 
 }
 
@@ -47,15 +48,15 @@ impl Token{
 
 } 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Stmt{
     stmt_type: StmtType,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StmtType{
     ///Name, Arguments
-    FunctionCall(Token, Vec<Token>),
+    FunctionCall(Token, Vec<Expr>),
     ///Name, Assignment
     Assignment(Token, Expr),
     ///Operator, Left Token, Right Token
@@ -71,7 +72,7 @@ enum ExprType{
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Expr{
     stmts: Vec<Stmt>,
     expr_type: ExprType

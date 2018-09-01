@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{Token, Stmt, StmtType, Expr, BinOp};
 use super::data::*;
 
-type LuaFunc = (fn(Vec<Token>, &Interpreter) -> ());
+type LuaFunc = (fn(Vec<LuaData>, &Interpreter) -> ());
 
 struct Interpreter{
     funcs: HashMap<String, LuaFunc>,
@@ -114,31 +114,47 @@ impl Interpreter{
         LuaData::Str(format!("{}{}", left_string, right_string))
     }
 
-    fn run_function_call(&mut self, name: &Token, args: Vec<Token>){        
+    fn run_function_call(&mut self, name: &Token, args: Vec<Expr>){        
         let name = match name{
             Token::Identifier(string) => string,
             _ => panic!("Illegal Token: expected identifier but found {:?}", name),
         };
         
+        let args = self.evaluate_args(args);
+
         let func = self.funcs.get(name);
 
         if let Some(func) = func{
             func(args, self);
         }
     }
+
+    fn evaluate_args(&self, exprs: Vec<Expr>) -> Vec<LuaData>{
+        let mut data = Vec::new();
+
+        for expr in exprs{
+            data.push(self.evaluate_expr(&expr));
+        }
+
+        data
+    }
 }
 
 pub fn run(stmts: &mut Vec<Stmt>){
     let mut interpreter = Interpreter::new();
 
-    interpreter.register_func("print".to_string(), |tokens, interpreter|{
-        for token in tokens{
-            match token{
-                Token::StringLiteral(string) => println!("{}", string),
-                Token::Identifier(string) => println!("{}", interpreter.get_variable(string).unwrap()),
+    interpreter.register_func("print".to_string(), |args, _|{
+        for arg in args{
+            match arg{
+                LuaData::Str(string) => print!("{}", string),
+                LuaData::Number(num) => print!("{}", num),
                 _ => (),
             }
+
+            print!("\t");
         }
+
+        println!();
     });
 
     for mut stmt in stmts.iter_mut(){
