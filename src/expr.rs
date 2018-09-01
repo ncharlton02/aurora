@@ -81,7 +81,7 @@ impl ExprParser{
 
         let right = match self.next_token(){
             Some(x) => x,
-            x => panic!("Expected token but found EOF"),
+            _ => panic!("Expected token but found EOF"),
         };
 
         Stmt{stmt_type: StmtType::BinOp(operator, left, right)}
@@ -95,7 +95,7 @@ impl ExprParser{
 
         let right = match self.next_token(){
             Some(x) => x,
-            x => panic!("Expected token but found EOF"),
+            _ => panic!("Expected token but found EOF"),
         };
 
         Stmt{stmt_type: StmtType::BinOp(operator, left, right)}

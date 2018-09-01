@@ -1,7 +1,5 @@
 
 use std::fmt;
-use super::Token;
-use std::collections::VecDeque;
 
 #[derive(Clone)]
 pub enum LuaData{

@@ -121,14 +121,6 @@ impl Parser{
         tokens
     }
 
-    fn match_next(&self, token: Token) -> bool{
-        if let Some(next) = self.tokens.get(0){
-            return *next == token 
-        }
-
-        false
-    }
-
     fn next_token(&mut self) -> Option<Token>{
         self.tokens.pop_front()
     }
