@@ -110,15 +110,11 @@ impl Scanner{
         self.curr -= 1;
 
         loop{
-            let character = self.advance_character().unwrap_or_else(||{
-                &' '
-            });
-
-            if !character.is_numeric(){
+            if !self.peek().unwrap_or(&' ').is_numeric(){
                 break;
             }
 
-            char_vec.push(*character);
+            char_vec.push(*self.advance_character().unwrap());
         }
 
         let string: String = char_vec.iter().collect();
