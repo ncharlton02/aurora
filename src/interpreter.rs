@@ -101,17 +101,30 @@ impl Interpreter{
     }
 
     fn evaluate_str_binop(&self, left: &Token, right: &Token) -> LuaData{
-        let left_string = match left{
-            Token::StringLiteral(x) => x,
-            _ => panic!("Expected string literal but found {:?}!", left),
-        };
-
-        let right_string = match right{
-            Token::StringLiteral(x) => x,
-            _ => panic!("Expected string literal but found {:?}!", right),
-        };
+        let left_string = self.token_to_string(left);
+        let right_string = self.token_to_string(right);
 
         LuaData::Str(format!("{}{}", left_string, right_string))
+    }
+
+    fn token_to_string(&self, token: &Token) -> String{
+        match token{
+            Token::StringLiteral(x) => x.to_string(),
+            Token::NumberLiteral(x) => format!("{}", x),
+            Token::Identifier(x) => {
+                let var = self.get_variable(x.to_string());
+
+                if let Some(var) = var{
+                    match var{
+                        LuaData::Str(x) => x.to_string(),
+                        LuaData::Number(x) => format!("{}", x),
+                    }
+                }else{
+                    "nil".to_string()
+                }
+            }
+            _ => panic!("Couldn't convert token to string: {:?}", token),
+        }
     }
 
     fn run_function_call(&mut self, name: &Token, args: Vec<Expr>){        
@@ -148,7 +161,6 @@ pub fn run(stmts: &mut Vec<Stmt>){
             match arg{
                 LuaData::Str(string) => print!("{}", string),
                 LuaData::Number(num) => print!("{}", num),
-                _ => (),
             }
 
             print!("\t");
