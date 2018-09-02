@@ -25,11 +25,41 @@ pub enum BinOp{
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Keyword{
+    True, False
+}
+
+impl Keyword{
+
+    pub fn vec() -> Vec<String>{
+        vec!["true", "false"].iter().map(|x| x.to_string()).collect()
+    }
+
+    pub fn is_keyword(string: &str) -> bool{
+        if Keyword::vec().contains(&string.to_string()){
+            return true;
+        }
+        
+        false
+    }
+
+    pub fn from_string(string: &str) -> Keyword{
+        match string{
+            "true" => Keyword::True,
+            "false" => Keyword::False,
+            _ => panic!("Couldn't convert string to keyword: {}", string),
+        }
+    }
+
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token{
     Identifier(String), 
     StringLiteral(String),
     NumberLiteral(i32),
     Operator(BinOp),
+    Keyword(Keyword),
     LeftParenthesis,
     RightParenthesis,
     Newline,

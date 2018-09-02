@@ -1,5 +1,5 @@
 
-use super::{Token, BinOp};
+use super::{Token, BinOp, Keyword};
 
 struct Scanner{
     src: Vec<char>,
@@ -128,7 +128,7 @@ impl Scanner{
     fn scan_identifier(&mut self) -> Token{
         let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
         let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), 
-            Some(&')'), Some(&',')];
+            Some(&')'), Some(&','), Some(&'\r')];
 
         loop{
             if stop_chars.contains(&self.peek()){
@@ -144,7 +144,12 @@ impl Scanner{
             }
         }
 
-        let string = char_vec.iter().collect();
+        let string: String = char_vec.iter().collect();
+
+        if Keyword::is_keyword(&string){
+            return Token::Keyword(Keyword::from_string(&string));
+        }
+
         Token::Identifier(string)
     }
 

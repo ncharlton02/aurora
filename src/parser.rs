@@ -48,7 +48,7 @@ impl Parser{
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
-            Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma =>{ 
+            Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
             },
             Token::Newline => self.scan_stmt(),

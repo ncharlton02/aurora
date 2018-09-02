@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use super::{Token, Stmt, StmtType, Expr, BinOp};
+use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword};
 use super::data::*;
 
 type LuaFunc = (fn(Vec<LuaData>, &Interpreter) -> ());
@@ -62,6 +62,8 @@ impl Interpreter{
         match token{
             Token::NumberLiteral(x) => LuaData::Number(x.clone()),
             Token::StringLiteral(x) => LuaData::Str(x.clone()),
+            Token::Keyword(Keyword::True) => LuaData::Bool(true),
+            Token::Keyword(Keyword::False) => LuaData::Bool(false),
             Token::Identifier(x) => {
                 if let Some(val) = self.get_variable(x.to_string()){
                     return val.clone();
@@ -115,10 +117,7 @@ impl Interpreter{
                 let var = self.get_variable(x.to_string());
 
                 if let Some(var) = var{
-                    match var{
-                        LuaData::Str(x) => x.to_string(),
-                        LuaData::Number(x) => format!("{}", x),
-                    }
+                    format!("{}", var).to_string()
                 }else{
                     "nil".to_string()
                 }
@@ -158,12 +157,7 @@ pub fn run(stmts: &mut Vec<Stmt>){
 
     interpreter.register_func("print".to_string(), |args, _|{
         for arg in args{
-            match arg{
-                LuaData::Str(string) => print!("{}", string),
-                LuaData::Number(num) => print!("{}", num),
-            }
-
-            print!("\t");
+            print!("{}\t", arg);
         }
 
         println!();
