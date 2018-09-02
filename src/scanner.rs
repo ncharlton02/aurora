@@ -37,7 +37,7 @@ impl Scanner{
                 ')' => Some(Token::RightParenthesis),
                 ',' => Some(Token::Comma),
                 '"' => Some(Token::StringLiteral(String::new())),
-                '\n' => Some(Token::Newline),
+                '\n' | ';' => Some(Token::Newline),
                 '=' => Some(Token::Operator(BinOp::Equal)),
                 '+' => Some(Token::Operator(BinOp::Plus)),
                 '-' => Some(Token::Operator(BinOp::Minus)),

@@ -30,10 +30,28 @@ impl Interpreter{
 
     pub fn run_stmt(&mut self, stmt: &mut Stmt){
         match stmt.stmt_type{
+            StmtType::If(ref expr, ref mut stmts, ref mut else_block) => self.run_if_stmt(expr, stmts, else_block),
             StmtType::FunctionCall(ref name, ref args) => self.run_function_call(name, args.to_vec()),
             StmtType::Assignment(ref name, ref expr) => self.handle_assignment(name, expr),
             StmtType::BinOp(_, _, _) | StmtType::Value(_) => panic!("Illegal Root Stmt: {:?}", stmt),
             StmtType::EOF => (),
+        }
+    }
+
+    fn run_if_stmt(&mut self, expr: &Expr, stmts: &mut Vec<Stmt>, else_block: &mut Option<Vec<Stmt>>){
+        let should_run = match self.evaluate_expr(expr){
+            LuaData::Bool(b) => b,
+            x => panic!("Expected boolean but found {}", x),
+        };
+
+        if should_run{
+            for stmt in stmts{
+                self.run_stmt(stmt);
+            }
+        }else if let Some(else_block) = else_block{
+            for stmt in else_block{
+                self.run_stmt(stmt);
+            }
         }
     }
 

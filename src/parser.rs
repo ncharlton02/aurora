@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, BinOp, Stmt, StmtType, Expr, expr};
+use super::{Token, BinOp, Stmt, StmtType, Expr, expr, Keyword};
 
 struct Parser{
     tokens: VecDeque<Token>,
@@ -47,6 +47,7 @@ impl Parser{
 
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
+            Token::Keyword(Keyword::If) => self.handle_if_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
@@ -54,6 +55,43 @@ impl Parser{
             Token::Newline => self.scan_stmt(),
             Token::EOF => return Stmt {stmt_type : StmtType::EOF},
         }
+    }
+
+    fn handle_if_stmt(&mut self) -> Stmt{
+        let expr_tokens = self.advance_to(Token::Keyword(Keyword::Then));
+        let expr = expr::parse(expr_tokens);
+        let (block_tokens, block_end) = self.advance_to_if_end();
+        let block = parse(block_tokens);
+
+        if block_end == Some(Keyword::Else) {
+            let else_block_tokens = self.advance_to(Token::Keyword(Keyword::End));
+
+            return Stmt {stmt_type : StmtType::If(expr, block, Some(parse(else_block_tokens)))}
+        }
+
+        Stmt{stmt_type : StmtType::If(expr, block, None)}
+    }
+
+    fn advance_to_if_end(&mut self) -> (Vec<Token>, Option<Keyword>){
+        let mut tokens = Vec::new();
+        let stop_keywords: Vec<Keyword> = vec![Keyword::End, Keyword::Else];
+
+        loop{
+            let token = self.next_token();
+
+            if let Some(token) = token{
+                match token{
+                    Token::Keyword(ref k) if stop_keywords.contains(k) => return (tokens, Some(k.clone())), 
+                    _ => (), 
+                }
+
+                tokens.push(token);
+            }else{
+                break;
+            }
+        }
+
+        (tokens, None)
     }
 
     fn handle_indentifier(&mut self, token: Token) -> Stmt{
