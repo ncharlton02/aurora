@@ -1,3 +1,7 @@
-is_greater = 5 > 6
+x = 5
+y = 6
+is_greater = x > y
 
-print("Is 5 greater than 6? " .. is_greater)
+print("X: ", x)
+print("Y: ", y)
+print("Is X greater than Y? " .. is_greater)

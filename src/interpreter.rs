@@ -83,15 +83,9 @@ impl Interpreter{
     }
 
     fn evaluate_num_binop(&self, operator: &BinOp, left: &Token, right: &Token) -> LuaData{
-        let left_num = match left{
-            Token::NumberLiteral(x) => x,
-            _ => panic!("Expected number literal but found {:?}!", left),
-        };
+        let left_num = self.token_to_num(left);
 
-        let right_num = match right{
-            Token::NumberLiteral(x) => x,
-            _ => panic!("Expected number literal but found {:?}!", right),
-        };
+        let right_num = self.token_to_num(right);
 
         match operator{
             BinOp::Plus => LuaData::Number(left_num + right_num),
@@ -124,6 +118,27 @@ impl Interpreter{
                     format!("{}", var).to_string()
                 }else{
                     "nil".to_string()
+                }
+            }
+            _ => panic!("Couldn't convert token to string: {:?}", token),
+        }
+    }
+
+     fn token_to_num(&self, token: &Token) -> i32{
+        match token{
+            Token::NumberLiteral(x) => *x,
+            Token::Identifier(x) => {
+                let var = self.get_variable(x.to_string());
+
+                if let Some(var) = var{
+                    match var{
+                        LuaData::Number(x) => *x,
+                        LuaData::Bool(true) => 1,
+                        LuaData::Bool(false) => 0,
+                        x => panic!("Couldn't convert type to number: {:?}", x),
+                    }
+                }else{
+                    0
                 }
             }
             _ => panic!("Couldn't convert token to string: {:?}", token),

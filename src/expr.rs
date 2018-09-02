@@ -68,10 +68,10 @@ impl ExprParser{
             return Stmt{stmt_type: StmtType::Value(token)};
         }
 
-        match token{
-            Token::NumberLiteral(_) => self.scan_num_expr(token),
-            Token::StringLiteral(_) => self.scan_string_expr(token),
-            _ => panic!("Unexpected token type: {:?}", token)
+        match self.expr_type{
+            ExprType::Number | ExprType::Bool => self.scan_num_expr(token),
+            ExprType::Str => self.scan_string_expr(token),
+            ref x => panic!("Unexpected expression type: {:?}", x)
         }
     }
 

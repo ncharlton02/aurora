@@ -1,7 +1,7 @@
 
 use std::fmt;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum LuaData{
     Str(String),
     Number(i32),

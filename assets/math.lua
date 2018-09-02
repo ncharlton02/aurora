@@ -1,9 +1,12 @@
-add = 5 + 5
-sub = 5 - 5
-mult = 5 * 5
-div = 5 / 5
+x = 15
+y = 3
 
-print("5 + 5 = " .. add)
-print("5 - 5 = " .. sub)
-print("5 * 5 = " .. mult)
-print("5 / 5 = " .. div)
+add = x + y
+sub = x - y
+mult = x * y
+div = x / y
+
+print("15 + 3 = " .. add)
+print("15 - 3 = " .. sub)
+print("15 * 3 = " .. mult)
+print("15 / 3 = " .. div)
