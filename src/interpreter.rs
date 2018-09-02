@@ -98,6 +98,10 @@ impl Interpreter{
             BinOp::Minus => LuaData::Number(left_num - right_num),
             BinOp::Multiply => LuaData::Number(left_num * right_num),
             BinOp::Divide => LuaData::Number(left_num / right_num),
+            BinOp::LessThan => LuaData::Bool(left_num < right_num),
+            BinOp::LessEqualThan => LuaData::Bool(left_num <= right_num),
+            BinOp::GreaterThan => LuaData::Bool(left_num > right_num),
+            BinOp::GreaterEqualThan => LuaData::Bool(left_num >= right_num),
             _ => panic!("Unknown num operator: {:?}!", operator),
         }
     }

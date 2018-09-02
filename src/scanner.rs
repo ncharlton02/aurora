@@ -44,6 +44,8 @@ impl Scanner{
                 '*' => Some(Token::Operator(BinOp::Multiply)),
                 '/' => Some(Token::Operator(BinOp::Divide)),
                 '.' => Some(Token::Operator(BinOp::Concat)),  
+                '<' => Some(Token::Operator(BinOp::LessThan)),
+                '>' => Some(Token::Operator(BinOp::GreaterThan)),
                 ' ' | '\t' | '\r' => None,
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 n if n.is_numeric() => Some(Token::NumberLiteral(0)),
@@ -61,6 +63,8 @@ impl Scanner{
                 Token::Identifier(_) => self.scan_identifier(),
                 Token::NumberLiteral(_) => self.scan_number(),
                 Token::Operator(BinOp::Concat) => self.check_elipse(),
+                Token::Operator(BinOp::GreaterThan) => self.scan_greater_than(),
+                Token::Operator(BinOp::LessThan) => self.scan_less_than(),
                 x => x
             }
         }else{
@@ -69,6 +73,27 @@ impl Scanner{
 
         token
     }
+
+    fn scan_greater_than(&mut self) -> Token{
+        if self.advance_character().unwrap_or(&' ') == &'='{
+            return Token::Operator(BinOp::GreaterEqualThan);
+        }
+
+        self.curr -= 1;
+
+        Token::Operator(BinOp::GreaterThan)
+    }
+
+    fn scan_less_than(&mut self) -> Token{
+        if self.advance_character().unwrap_or(&' ') == &'='{
+            return Token::Operator(BinOp::LessEqualThan);
+        }
+
+        self.curr -= 1;
+
+        Token::Operator(BinOp::LessThan)
+    }
+
 
     fn check_elipse(&mut self) -> Token{
         let c = self.advance_character();

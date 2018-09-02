@@ -23,6 +23,8 @@ impl ExprParser{
             // If the expression has a operator it have more than value 
             let token_type = match token{
                 Token::Operator(BinOp::Concat) => Some(ExprType::Str),
+                Token::Operator(BinOp::LessThan) | Token::Operator(BinOp::LessEqualThan) |
+                Token::Operator(BinOp::GreaterThan) | Token::Operator(BinOp::GreaterEqualThan) => Some(ExprType::Bool),
                 Token::Operator(_) => Some(ExprType::Number),
                 _ => None,
             };

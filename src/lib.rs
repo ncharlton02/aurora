@@ -17,6 +17,10 @@ pub enum LuaResult{
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinOp{
     Concat,
+    LessThan,
+    LessEqualThan,
+    GreaterThan,
+    GreaterEqualThan,
     Equal,
     Plus,
     Minus, 
@@ -98,7 +102,7 @@ pub enum StmtType{
 
 #[derive(Debug, PartialEq, Clone)]
 enum ExprType{
-    Str, Number, SingleValue
+    Str, Number, Bool, SingleValue
 }
 
 
