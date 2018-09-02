@@ -48,7 +48,7 @@ impl Scanner{
                 '>' => Some(Token::Operator(BinOp::GreaterThan)),
                 ' ' | '\t' | '\r' => None,
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
-                n if n.is_numeric() => Some(Token::NumberLiteral(0)),
+                n if n.is_numeric() => Some(Token::NumberLiteral(0.0)),
                 x => {
                     panic!("Unknown Character: {}", x); 
                 }
@@ -131,12 +131,17 @@ impl Scanner{
     }
 
     fn scan_number(&mut self) -> Token{
+        let mut had_decimal = false;
         let mut char_vec: Vec<char> = Vec::new();
         self.curr -= 1;
 
         loop{
-            if !self.peek().unwrap_or(&' ').is_numeric(){
-                break;
+            if !self.peek().unwrap_or(&' ').is_numeric() {
+                if self.peek().unwrap_or(&' ') != &'.' || had_decimal{
+                    break;
+                }
+
+                had_decimal = true;
             }
 
             char_vec.push(*self.advance_character().unwrap());
@@ -144,7 +149,7 @@ impl Scanner{
 
         let string: String = char_vec.iter().collect();
 
-        match string.parse::<i32>(){
+        match string.parse::<f64>(){
             Ok(n) => Token::NumberLiteral(n),
             Err(e) => panic!("Unable to parse number literal {}: {}", string, e),
         }

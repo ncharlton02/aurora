@@ -65,7 +65,7 @@ impl Keyword{
 pub enum Token{
     Identifier(String), 
     StringLiteral(String),
-    NumberLiteral(i32),
+    NumberLiteral(f64),
     Operator(BinOp),
     Keyword(Keyword),
     LeftParenthesis,

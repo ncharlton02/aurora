@@ -142,7 +142,7 @@ impl Interpreter{
         }
     }
 
-     fn token_to_num(&self, token: &Token) -> i32{
+     fn token_to_num(&self, token: &Token) -> f64{
         match token{
             Token::NumberLiteral(x) => *x,
             Token::Identifier(x) => {
@@ -151,12 +151,12 @@ impl Interpreter{
                 if let Some(var) = var{
                     match var{
                         LuaData::Number(x) => *x,
-                        LuaData::Bool(true) => 1,
-                        LuaData::Bool(false) => 0,
+                        LuaData::Bool(true) => 1.0,
+                        LuaData::Bool(false) => 0.0,
                         x => panic!("Couldn't convert type to number: {:?}", x),
                     }
                 }else{
-                    0
+                    0.0
                 }
             }
             _ => panic!("Couldn't convert token to string: {:?}", token),

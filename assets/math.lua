@@ -1,12 +1,12 @@
 x = 15
-y = 3
+y = 2.5
 
 add = x + y
 sub = x - y
 mult = x * y
 div = x / y
 
-print("15 + 3 = " .. add)
-print("15 - 3 = " .. sub)
-print("15 * 3 = " .. mult)
-print("15 / 3 = " .. div)
+print("13 + 2.5 = " .. add)
+print("13 - 2.5 = " .. sub)
+print("13 * 2.5 = " .. mult)
+print("13 / 2.5 = " .. div)
