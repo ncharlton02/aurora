@@ -30,13 +30,13 @@ pub enum BinOp{
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword{
-    True, False, If, Then, Else, End
+    True, False, If, Then, Else, End, Function, Return
 }
 
 impl Keyword{
 
     pub fn vec() -> Vec<String>{
-        vec!["true", "false", "if", "else", "then", "end"].iter().map(|x| x.to_string()).collect()
+        vec!["true", "false", "if", "else", "then", "end", "function", "return"].iter().map(|x| x.to_string()).collect()
     }
 
     pub fn is_keyword(string: &str) -> bool{
@@ -55,6 +55,8 @@ impl Keyword{
             "else" => Keyword::Else,
             "then" => Keyword::Then,
             "end" => Keyword::End,
+            "function" => Keyword::Function,
+            "return" => Keyword::Return,
             _ => panic!("Couldn't convert string to keyword: {}", string),
         }
     }
@@ -95,14 +97,18 @@ pub struct Stmt{
 pub enum StmtType{
     ///Name, Arguments
     FunctionCall(Token, Vec<Expr>),
+    ///Name, Arguments, Stmts
+    FunctionDef(Token, Vec<Token>, Vec<Stmt>),
     ///Name, Assignment
     Assignment(Token, Expr),
     ///Operator, Left Token, Right Token
     BinOp(BinOp, Token, Token),
     ///A single token value
-    Value(Token),
+    Value(Vec<Token>),
     ///Condition, Stmts, Else
     If(Expr, Vec<Stmt>, Option<Vec<Stmt>>),
+    ///
+    Return(Expr),
     EOF
 }
 

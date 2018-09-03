@@ -6,6 +6,7 @@ pub enum LuaData{
     Str(String),
     Number(f64),
     Bool(bool),
+    Nil,
 }
 
 impl fmt::Display for LuaData {
@@ -14,6 +15,7 @@ impl fmt::Display for LuaData {
             LuaData::Str(string) => write!(f, "{}", string),
             LuaData::Number(number) => write!(f, "{}", number),
             LuaData::Bool(b) => write!(f, "{}", b),
+            LuaData::Nil => write!(f, "nil"),
         }
     }
 }

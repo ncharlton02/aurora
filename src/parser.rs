@@ -48,6 +48,8 @@ impl Parser{
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
             Token::Keyword(Keyword::If) => self.handle_if_stmt(),
+            Token::Keyword(Keyword::Function) => self.handle_func_dec(),
+            Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
                 panic!("Stmt's cannot start with {:?}", token)
@@ -55,6 +57,14 @@ impl Parser{
             Token::Newline => self.scan_stmt(),
             Token::EOF => return Stmt {stmt_type : StmtType::EOF},
         }
+    }
+
+    fn handle_return_stmt(&mut self) -> Stmt{
+        let value_tokens = self.advance_to(Token::Newline);
+
+        let expr = expr::parse(value_tokens);
+
+        Stmt{stmt_type: StmtType::Return(expr)}
     }
 
     fn handle_if_stmt(&mut self) -> Stmt{
@@ -92,6 +102,59 @@ impl Parser{
         }
 
         (tokens, None)
+    }
+
+
+    fn handle_func_dec(&mut self) -> Stmt{
+        let name = self.next_token().unwrap_or_else(||{
+            panic!("Expected token following keyword function!");
+        });
+
+        //Remove left parenthesis
+        match self.next_token(){
+            Some(Token::LeftParenthesis) => (),
+            x => panic!("Expected left parenthesis but found {:?}", x),
+        }
+
+        let mut args = self.advance_to(Token::RightParenthesis);
+        args.retain(|t| t != &Token::Comma);
+
+        let block_tokens = self.advance_to_function_end();
+        let block = parse(block_tokens);
+
+        //Remove 'End'
+        self.next_token();
+
+        Stmt{stmt_type : StmtType::FunctionDef(name, args, block)}
+    }
+
+    fn advance_to_function_end(&mut self) -> Vec<Token>{
+        let mut tokens = Vec::new();
+        let mut level = 0;
+
+        loop{
+            let token = self.next_token();
+
+            if let Some(token) = token{
+                match token{
+                    Token::Keyword(Keyword::If)  => level+=1,
+                    Token::Keyword(Keyword::End) => {
+                        if level == 0{
+                            break;
+                        }
+
+                        level -= 1;
+                    } 
+                    _ => (), 
+                }
+
+                tokens.push(token);
+            }else{
+                break;
+            }
+        }
+
+        tokens
     }
 
     fn handle_indentifier(&mut self, token: Token) -> Stmt{

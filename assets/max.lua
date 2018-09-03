@@ -1,12 +1,13 @@
-x = 5
-y = 6
+function max(num1, num2)
 
-if x > y then
-    result = "X is bigger"
-else
-    result = "Y is bigger"
-end
+    if num1 > num2 then
+       result = num1
+    else
+       result = num2
+    end
+ 
+    return result;
+ end
 
-print("X: ", x)
-print("Y: ", y)
-print(""..result)
+bigger_num = max(5, 6)
+print("Which is bigger, 5 or 6?", bigger_num)

@@ -63,16 +63,35 @@ impl ExprParser{
         }
 
         let token = token.unwrap();
-
-        if self.expr_type == ExprType::SingleValue{
-            return Stmt{stmt_type: StmtType::Value(token)};
-        }
-
+        
         match self.expr_type{
             ExprType::Number | ExprType::Bool => self.scan_num_expr(token),
             ExprType::Str => self.scan_string_expr(token),
+            ExprType::SingleValue => self.scan_value(token),
             ref x => panic!("Unexpected expression type: {:?}", x)
         }
+    }
+
+    fn scan_value(&mut self, token: Token) -> Stmt{
+        let mut tokens = vec![token];
+
+        loop{
+            let next_token = self.next_token();
+
+            if let Some(token) = next_token{
+
+                if token == Token::EOF || token == Token::Newline{
+                    tokens.push(token);
+                    break;
+                }
+
+                tokens.push(token);
+            }else{
+                break;
+            }
+        }
+
+        Stmt{stmt_type: StmtType::Value(tokens)}
     }
 
     fn scan_num_expr(&mut self, left: Token) -> Stmt{
