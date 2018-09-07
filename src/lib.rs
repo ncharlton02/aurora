@@ -1,9 +1,7 @@
 
-mod scanner;
 mod parser;
 mod interpreter;
 mod data;
-mod expr;
 
 #[cfg(test)]
 mod test;
@@ -125,7 +123,7 @@ pub struct Expr{
 }
 
 pub fn run(src: String) -> LuaResult{
-    let tokens = scanner::scan(src);
+    let tokens = parser::scanner::scan(src);
     print_token_info(&tokens);
     println!("");
 

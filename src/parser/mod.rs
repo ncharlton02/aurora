@@ -1,7 +1,9 @@
 
-use std::collections::VecDeque;
+pub mod scanner;
+pub mod expr;
 
-use super::{Token, BinOp, Stmt, StmtType, Expr, expr, Keyword};
+use std::collections::VecDeque;
+use super::{Token, BinOp, Stmt, StmtType, Expr, Keyword};
 
 struct Parser{
     tokens: VecDeque<Token>,

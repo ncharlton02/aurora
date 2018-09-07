@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, BinOp, Stmt, StmtType, Expr, ExprType};
+use super::{Token, BinOp, Stmt, StmtType, Expr, super::ExprType};
 
 struct ExprParser{
     expr_type: ExprType,
@@ -68,7 +68,6 @@ impl ExprParser{
             ExprType::Number | ExprType::Bool => self.scan_num_expr(token),
             ExprType::Str => self.scan_string_expr(token),
             ExprType::SingleValue => self.scan_value(token),
-            ref x => panic!("Unexpected expression type: {:?}", x)
         }
     }
 
