@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::data::*;
 
@@ -9,25 +9,42 @@ mod function;
 
 pub struct Interpreter{
     funcs: HashMap<String, Function>,
-    variables: HashMap<String, LuaData>
+    globals: HashMap<String, LuaData>,
+    stack: Vec<HashMap<String, LuaData>>
 }
 
 impl Interpreter{
 
     pub fn new() -> Interpreter{
-        Interpreter {funcs: HashMap::new(), variables: HashMap::new()}
+        Interpreter {
+            funcs: HashMap::new(), 
+            globals: HashMap::new(),
+            stack: vec![HashMap::new()]
+        }
     }
 
     pub fn register_func(&mut self, name: String, func: Function){
         self.funcs.insert(name, func);
     }
 
-    pub fn assign_variable(&mut self, name: String, data: LuaData){
-        self.variables.insert(name, data);
+    pub fn assign_variable(&mut self, name: String, data: LuaData, is_local: bool){
+        if is_local{
+            let index = self.stack.len() - 1;
+            let frame = &mut self.stack[index];
+
+            frame.insert(name, data);
+            return;
+        }
+
+        self.globals.insert(name, data);
     }
 
     pub fn get_variable(&self, name: String) -> Option<&LuaData>{
-        self.variables.get(&name)
+        if let Some(var) = self.stack.last().unwrap().get(&name){
+            return Some(var);
+        }
+
+        self.globals.get(&name)
     }
 
     pub fn run_stmt(&mut self, stmt: &mut Stmt){
@@ -35,7 +52,7 @@ impl Interpreter{
             StmtType::FunctionDef(ref name, ref args, ref block) => self.handle_func_def(name, args, block),
             StmtType::If(ref expr, ref mut stmts, ref mut else_block) => self.run_if_stmt(expr, stmts, else_block),
             StmtType::FunctionCall(ref name, ref args) => {self.run_function_call(name, args.to_vec()); ()},
-            StmtType::Assignment(ref name, ref expr) => self.handle_assignment(name, expr),
+            StmtType::Assignment(ref name, ref expr, ref is_local) => self.handle_assignment(name, expr, *is_local),
             StmtType::BinOp(_, _, _) | StmtType::Value(_) => panic!("Illegal Root Stmt: {:?}", stmt),
             StmtType::Return(_) => unreachable!(),
             StmtType::EOF => (),
@@ -48,7 +65,7 @@ impl Interpreter{
             x => panic!("Expected identifer but found {:?}", x),
         };
 
-        let func = LuaFunc{arg_defs: args.to_vec(), stmts: stmts.to_vec()};
+        let func = LuaFunc::new(args.to_vec(), stmts.to_vec());
 
         self.register_func(name.to_string(), Function::Lua(func));
     }
@@ -70,7 +87,7 @@ impl Interpreter{
         }
     }
 
-    fn handle_assignment(&mut self, name: &Token, expr: &Expr){
+    fn handle_assignment(&mut self, name: &Token, expr: &Expr, is_local: bool){
          let name = match name{
             Token::Identifier(n) => n,
             _ => panic!("Illegal Token: expected identifier but found {:?}", name),
@@ -78,7 +95,7 @@ impl Interpreter{
 
         let value = self.evaluate_expr(expr);
 
-        self.assign_variable(name.to_string(), value);
+        self.assign_variable(name.to_string(), value, is_local);
     }
 
     fn evaluate_expr(&mut self, expr: &Expr) -> LuaData{
@@ -113,7 +130,7 @@ impl Interpreter{
                         if let Some(val) = self.get_variable(x.to_string()){
                             val.clone()
                         }else{
-                            panic!("Coudn't find variable with name {}", x.to_string())
+                            LuaData::Nil
                         }
                     },
                     x => panic!("Unexpected token: {:?}", x),
@@ -203,11 +220,17 @@ impl Interpreter{
         let func = self.funcs.get(name).unwrap_or_else(|| {
             panic!("Unable to find function with name: {}", name)
         }).clone();
+
+        self.stack.push(HashMap::new());
       
-        match func{
+        let result = match func{
             Function::Rust(func) => func(arg_data, self),
             Function::Lua(mut func) => func.execute(arg_data, self),
-        }.unwrap_or_else(||{LuaData::Nil})
+        }.unwrap_or_else(||{LuaData::Nil});
+
+        self.stack.pop();
+
+        result
     }
 
     fn evaluate_args(&mut self, exprs: Vec<Expr>) -> Vec<LuaData>{

@@ -49,6 +49,7 @@ impl Parser{
 
         match token{
             Token::Identifier(_) => self.handle_indentifier(token),
+            Token::Keyword(Keyword::Local) => self.handle_local(),
             Token::Keyword(Keyword::If) => self.handle_if_stmt(),
             Token::Keyword(Keyword::Function) => self.handle_func_dec(),
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
@@ -171,16 +172,32 @@ impl Parser{
                     return Stmt {stmt_type};
                 },
                 Token::Operator(BinOp::Equal) =>{
-                    let expr = expr::parse(self.advance_to(Token::Newline));
-                    let stmt_type = StmtType::Assignment(token, expr);
-
-                    return Stmt {stmt_type};
+                   self.scan_assignment(token, false)
                 },
                 _ => panic!("Unknown token following identifier: {:?}", token),
             }
         }else{
             panic!("Files cannot end with identifiers!");
         }
+    }
+
+    fn handle_local(&mut self) -> Stmt{
+        let name = self.next_token().unwrap_or_else(||{panic!("Expected token following keyword local, but found None!")});
+
+        let equal_token = self.next_token().unwrap_or_else(||{panic!("Expected token '=' but found None!")});
+
+        if equal_token != Token::Operator(BinOp::Equal){
+            panic!("Expected token '=' but found, {:?}", equal_token);
+        }
+
+        self.scan_assignment(name, true)
+    }
+
+    fn scan_assignment(&mut self, name: Token, is_local: bool) -> Stmt{
+        let expr = expr::parse(self.advance_to(Token::Newline));
+        let stmt_type = StmtType::Assignment(name, expr, is_local);
+
+        return Stmt {stmt_type};
     }
 
     fn parse_args(&self, args: Vec<Token>) -> Vec<Expr>{
