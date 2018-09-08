@@ -28,7 +28,7 @@ impl Interpreter{
     }
 
     pub fn assign_variable(&mut self, name: String, data: LuaData, is_local: bool){
-        if is_local{
+        if is_local || self.stack.last().unwrap().contains_key(&name){
             let index = self.stack.len() - 1;
             let frame = &mut self.stack[index];
 
