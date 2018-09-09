@@ -1,0 +1,14 @@
+src="assets/fib.lua"
+tokens=75
+statements=7
+
+[test_variables]
+names=[
+    "count",
+    "result"
+]
+
+values=[
+    "50",
+    "12586269025"
+]

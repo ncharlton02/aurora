@@ -1,10 +1,11 @@
+extern crate aurora;
 
 use std::fs;
 use std::io::prelude::*;
 use std::fs::File;
 
 #[test]
-fn test(){
+fn run_lua_examples(){
     let paths = fs::read_dir("assets").unwrap();
 
     for path in paths {
@@ -12,7 +13,7 @@ fn test(){
 
         println!("Testing file: {}", path.display());
 
-        super::run(load_file(path.display().to_string()));
+        aurora::run(load_file(path.display().to_string()));
     }
 }
 

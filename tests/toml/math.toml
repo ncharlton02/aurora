@@ -1,0 +1,7 @@
+src="assets/math.lua"
+tokens=62
+statements=11
+
+[test_variables]
+names = ["add", "sub", "mult", "div"]
+values = ["17.5", "12.5", "37.5", "6"]

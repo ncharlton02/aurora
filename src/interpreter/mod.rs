@@ -244,7 +244,7 @@ impl Interpreter{
     }
 }
 
-pub fn run(stmts: &mut Vec<Stmt>){
+pub fn run(stmts: &mut Vec<Stmt>) -> Interpreter{
     let mut interpreter = Interpreter::new();
 
     interpreter.register_func("print".to_string(), Function::Rust(|args, _| -> Option<LuaData>{
@@ -259,4 +259,6 @@ pub fn run(stmts: &mut Vec<Stmt>){
     for mut stmt in stmts.iter_mut(){
         interpreter.run_stmt(&mut stmt);
     }
+
+    interpreter
 }

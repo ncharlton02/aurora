@@ -1,3 +1,4 @@
 language: rust
 script:
-  - cargo test -- --nocapture
+  - cargo build
+  - cargo test

@@ -1,10 +1,7 @@
 
-mod parser;
-mod interpreter;
-mod data;
-
-#[cfg(test)]
-mod test;
+pub mod parser;
+pub mod interpreter;
+pub mod data;
 
 #[derive(Debug)]
 pub enum LuaResult{
