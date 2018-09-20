@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use aurora::data::LuaData;
 
-const ROOT_PATH : &'static str = "tests\\toml";
+const ROOT_PATH : &'static str = "tests/toml";
 
 #[derive(Debug, Deserialize)]
 struct TestInfo{
