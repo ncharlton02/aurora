@@ -107,6 +107,39 @@ pub enum StmtType{
     EOF
 }
 
+impl StmtType{
+
+    fn stmt_count_recursive(&self) -> u32{
+        match self{
+            StmtType::Return(_) | StmtType::Assignment(_, _, _) | StmtType::BinOp(_, _, _) | 
+            StmtType::FunctionCall(_, _) | StmtType::EOF | StmtType::Value(_) => 1,
+            StmtType::If(_, block, else_block) => {
+                let mut count = 1 + count_stmts_recur(block);
+
+                if let Some(else_block) = else_block{
+                    count += count_stmts_recur(else_block);
+                }
+
+                count
+            },
+            StmtType::FunctionDef(_, _, block) => {
+                1 + count_stmts_recur(block)
+            } 
+        }
+    }
+
+}
+
+pub fn count_stmts_recur(stmts: &Vec<Stmt>) -> u32{
+    let mut count = 0;
+
+    for x in stmts {
+        count += x.stmt_type.stmt_count_recursive();
+    }
+
+    count
+}
+
 #[derive(Debug, PartialEq, Clone)]
 enum ExprType{
     Str, Number, Bool, SingleValue
@@ -135,7 +168,7 @@ pub fn run(src: String) -> LuaResult{
 }
 
 fn print_stmt_info(stmts: &Vec<Stmt>){
-    println!("Stmt Count: {}", stmts.len());
+    println!("Stmt Count: {}", count_stmts_recur(stmts));
 
     for stmt in stmts{
         println!("{:#?}", stmt);

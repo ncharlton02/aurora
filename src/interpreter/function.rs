@@ -1,6 +1,6 @@
 
 use super::{Interpreter};
-use super::super::{Token, Stmt, StmtType, data::LuaData};
+use super::super::{Token, Stmt, data::LuaData};
 
 type RustFunc = fn(Vec<LuaData>, &Interpreter) -> Option<LuaData>;
 

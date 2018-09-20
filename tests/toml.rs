@@ -49,7 +49,8 @@ fn run_toml_test(path: PathBuf){
     let mut stmts = aurora::parser::parse(tokens);
 
     if let Some(num) = test_info.statements{
-        assert_eq!(num, stmts.len())
+        let stmt_count = aurora::count_stmts_recur(&stmts);
+        assert_eq!(num, stmt_count as usize)
     }
 
     println!("--------- Running -------");
