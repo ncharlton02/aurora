@@ -1,18 +1,16 @@
 times = 50
-count = 1
-result = 0
 
-function fib(x, y)
+function fib(x, y, count)
     local z = x + y
     y = x
     count = count + 1
 
     if count < times then
-        fib(z, y)
+        return fib(z, y, count)
     else
-        result = x
+        return x
     end
 end
 
-fib(1, 1)
-print(result)
+x = fib(1, 1, 1)
+print(x)

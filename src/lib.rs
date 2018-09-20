@@ -103,7 +103,6 @@ pub enum StmtType{
     Value(Vec<Token>),
     ///Condition, Stmts, Else
     If(Expr, Vec<Stmt>, Option<Vec<Stmt>>),
-    ///
     Return(Expr),
     EOF
 }

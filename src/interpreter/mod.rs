@@ -1,5 +1,5 @@
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::data::*;
 
@@ -10,7 +10,8 @@ mod function;
 pub struct Interpreter{
     funcs: HashMap<String, Function>,
     globals: HashMap<String, LuaData>,
-    stack: Vec<HashMap<String, LuaData>>
+    stack: Vec<HashMap<String, LuaData>>,
+    return_val: Option<LuaData>
 }
 
 impl Interpreter{
@@ -19,7 +20,8 @@ impl Interpreter{
         Interpreter {
             funcs: HashMap::new(), 
             globals: HashMap::new(),
-            stack: vec![HashMap::new()]
+            stack: vec![HashMap::new()],
+            return_val: None,
         }
     }
 
@@ -48,15 +50,23 @@ impl Interpreter{
     }
 
     pub fn run_stmt(&mut self, stmt: &mut Stmt){
+        if let Some(_) = self.return_val{
+            return;
+        }
+
         match stmt.stmt_type{
             StmtType::FunctionDef(ref name, ref args, ref block) => self.handle_func_def(name, args, block),
             StmtType::If(ref expr, ref mut stmts, ref mut else_block) => self.run_if_stmt(expr, stmts, else_block),
             StmtType::FunctionCall(ref name, ref args) => {self.run_function_call(name, args.to_vec()); ()},
             StmtType::Assignment(ref name, ref expr, ref is_local) => self.handle_assignment(name, expr, *is_local),
             StmtType::BinOp(_, _, _) | StmtType::Value(_) => panic!("Illegal Root Stmt: {:?}", stmt),
-            StmtType::Return(_) => unreachable!(),
+            StmtType::Return(ref expr) => self.handle_return(expr),
             StmtType::EOF => (),
         }
+    }
+
+    fn handle_return(&mut self, expr: &Expr){
+        self.return_val = Some(self.evaluate_expr(expr));
     }
 
     fn handle_func_def(&mut self, name: &Token, args: &Vec<Token>, stmts: &Vec<Stmt>){
@@ -226,9 +236,10 @@ impl Interpreter{
         let result = match func{
             Function::Rust(func) => func(arg_data, self),
             Function::Lua(mut func) => func.execute(arg_data, self),
-        }.unwrap_or_else(||{LuaData::Nil});
+        }.unwrap_or(LuaData::Nil);
 
         self.stack.pop();
+        self.return_val = None;
 
         result
     }

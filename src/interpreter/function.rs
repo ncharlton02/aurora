@@ -1,5 +1,4 @@
 
-use std::collections::HashMap;
 use super::{Interpreter};
 use super::super::{Token, Stmt, StmtType, data::LuaData};
 
@@ -24,20 +23,15 @@ impl LuaFunc{
 
         self.add_args(interpreter, arg_data);
 
-        let mut return_value = None;
-
         for stmt in &self.stmts{
-            match stmt.stmt_type{
-                StmtType::Return(ref expr) => {
-                    return_value = Some(interpreter.evaluate_expr(expr));
-                    break;
-                }
-                _ => interpreter.run_stmt(&mut stmt.clone()),
+            if let Some(_) = interpreter.return_val{
+                break;
             }
+
+            interpreter.run_stmt(&mut stmt.clone())
         }
 
-        //The intepreter will automatically pop the stack and remove the arguments
-        return_value
+        interpreter.return_val.clone()
     }
 
     fn add_args(&self, interpreter: &mut Interpreter, data: Vec<LuaData>){
