@@ -1,7 +1,8 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, BinOp, Stmt, StmtType, Expr, super::ExprType};
+use super::{Token, BinOp, Stmt, StmtType, Expr, error};
+use super::super::{ExprType, error::LuaError};
 
 struct ExprParser{
     expr_type: ExprType,
@@ -38,11 +39,11 @@ impl ExprParser{
         ExprParser {tokens: tokens_deque, expr_type: expr_type}
     }
     
-    fn parse(mut self) -> Vec<Stmt>{
+    fn parse(mut self) -> Result<Vec<Stmt>, LuaError>{
         let mut stmts: Vec<Stmt> = Vec::new();
 
         loop{
-            let stmt = self.scan_stmt();
+            let stmt = self.scan_stmt()?;
 
             if stmt.stmt_type == StmtType::EOF{
                 stmts.push(stmt);
@@ -52,14 +53,14 @@ impl ExprParser{
             stmts.push(stmt);
         }
 
-        stmts
+        Ok(stmts)
     }
 
-    fn scan_stmt(&mut self) -> Stmt{
+    fn scan_stmt(&mut self) -> Result<Stmt, LuaError>{
         let token = self.next_token();
 
         if token == None{
-            return Stmt {stmt_type: StmtType::EOF};
+            return Ok(Stmt {stmt_type: StmtType::EOF});
         }
 
         let token = token.unwrap();
@@ -71,7 +72,7 @@ impl ExprParser{
         }
     }
 
-    fn scan_value(&mut self, token: Token) -> Stmt{
+    fn scan_value(&mut self, token: Token) -> Result<Stmt, LuaError>{
         let mut tokens = vec![token];
 
         loop{
@@ -90,35 +91,35 @@ impl ExprParser{
             }
         }
 
-        Stmt{stmt_type: StmtType::Value(tokens)}
+        Ok(Stmt{stmt_type: StmtType::Value(tokens)})
     }
 
-    fn scan_num_expr(&mut self, left: Token) -> Stmt{
+    fn scan_num_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
         let operator = match self.next_token(){
             Some(Token::Operator(operator)) => operator,
-            x => panic!("Expected binary operator but found {:?}", x),
+            x => return error(format!("Expected binary operator but found {:?}", x)),
         };
 
         let right = match self.next_token(){
             Some(x) => x,
-            _ => panic!("Expected token but found EOF"),
+            _ => return error(format!("Expected token but found EOF")),
         };
 
-        Stmt{stmt_type: StmtType::BinOp(operator, left, right)}
+        Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
     }
 
-    fn scan_string_expr(&mut self, left: Token) -> Stmt{
+    fn scan_string_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
         let operator = match self.next_token(){
             Some(Token::Operator(BinOp::Concat)) => BinOp::Concat,
-            x => panic!("Expected binary operator but found {:?}", x),
+            x => return error(format!("Expected binary operator but found {:?}", x)),
         };
 
         let right = match self.next_token(){
             Some(x) => x,
-            _ => panic!("Expected token but found EOF"),
+            _ => return error(format!("Expected token but found EOF")),
         };
 
-        Stmt{stmt_type: StmtType::BinOp(operator, left, right)}
+        Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
     }
 
     fn next_token(&mut self) -> Option<Token>{
@@ -126,8 +127,9 @@ impl ExprParser{
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Expr{
+pub fn parse(tokens: Vec<Token>) -> Result<Expr, LuaError>{
     let parser = ExprParser::new(tokens);
-
-    Expr{expr_type: parser.expr_type.clone(), stmts: parser.parse(), }
+    let expr_type = parser.expr_type.clone();
+    
+    Ok(Expr{expr_type: expr_type, stmts: parser.parse()?})
 }

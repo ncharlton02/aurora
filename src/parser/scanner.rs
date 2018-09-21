@@ -1,5 +1,6 @@
 
 use super::{Token, BinOp, Keyword};
+use super::super::error::{LuaError};
 
 struct Scanner{
     src: Vec<char>,
@@ -12,11 +13,18 @@ impl Scanner{
         Scanner{src : src.chars().collect(), curr : 0}
     }
 
-    pub fn scan(mut self) -> Vec<Token>{
+    pub fn scan(mut self) -> Result<Vec<Token>, Vec<LuaError>>{
         let mut tokens = Vec::new();
+        let mut errors = Vec::new();
 
         loop{
-            let token = self.scan_token();
+            let token = match self.scan_token(){
+                Ok(x)=> x,
+                Err(e) => {
+                    errors.push(e); 
+                    continue;
+                },
+            };
 
             if token == Token::EOF{
                 tokens.push(token);
@@ -26,11 +34,14 @@ impl Scanner{
             tokens.push(token);
         }
 
-        println!();
-        tokens
+        if errors.len() > 0{
+            return Err(errors);
+        }
+
+        Ok(tokens)
     }
 
-    fn scan_token(&mut self) -> Token{
+    fn scan_token(&mut self) -> Result<Token, LuaError>{
         let token = if let Some(c) = self.advance_character(){
             match c {
                 '(' => Some(Token::LeftParenthesis),
@@ -50,14 +61,14 @@ impl Scanner{
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 n if n.is_numeric() => Some(Token::NumberLiteral(0.0)),
                 x => {
-                    panic!("Unknown Character: {}", x); 
+                    return error(format!("Unknown Character: {}", x))
                 }
             }
         }else{
             Some(Token::EOF)
         };
 
-        let token = if let Some(token) = token{
+        if let Some(token) = token{
             match token{
                 Token::StringLiteral(_) => self.scan_string(),
                 Token::Identifier(_) => self.scan_identifier(),
@@ -65,58 +76,56 @@ impl Scanner{
                 Token::Operator(BinOp::Concat) => self.check_elipse(),
                 Token::Operator(BinOp::GreaterThan) => self.scan_greater_than(),
                 Token::Operator(BinOp::LessThan) => self.scan_less_than(),
-                x => x
+                x => Ok(x)
             }
         }else{
             self.scan_token()
-        };
-
-        token
+        }
     }
 
-    fn scan_greater_than(&mut self) -> Token{
+    fn scan_greater_than(&mut self) -> Result<Token, LuaError>{
         if self.advance_character().unwrap_or(&' ') == &'='{
-            return Token::Operator(BinOp::GreaterEqualThan);
+            return Ok(Token::Operator(BinOp::GreaterEqualThan));
         }
 
         self.curr -= 1;
 
-        Token::Operator(BinOp::GreaterThan)
+        Ok(Token::Operator(BinOp::GreaterThan))
     }
 
-    fn scan_less_than(&mut self) -> Token{
+    fn scan_less_than(&mut self) -> Result<Token, LuaError>{
         if self.advance_character().unwrap_or(&' ') == &'='{
-            return Token::Operator(BinOp::LessEqualThan);
+            return Ok(Token::Operator(BinOp::LessEqualThan));
         }
 
         self.curr -= 1;
 
-        Token::Operator(BinOp::LessThan)
+        Ok(Token::Operator(BinOp::LessThan))
     }
 
 
-    fn check_elipse(&mut self) -> Token{
+    fn check_elipse(&mut self) -> Result<Token, LuaError>{
         let c = self.advance_character();
 
         if let Some(c) = c{
             if c != &'.'{
-                panic!("Expected ellipse, found: {}", c);
+                return error(format!("Expected ellipse, found: {}", c));
             }
         }else{
-            panic!("File cannot end with character '.'");
+            return error(format!("File cannot end with character '.'"));
         }
 
-        Token::Operator(BinOp::Concat)
+        Ok(Token::Operator(BinOp::Concat))
     }
 
-    fn scan_string(&mut self) -> Token{
+    fn scan_string(&mut self) -> Result<Token, LuaError>{
         let mut char_vec: Vec<char> = Vec::new();
 
         loop{
             let character = self.advance_character();
 
             if character == None{
-                return Token::EOF;
+                return Ok(Token::EOF);
             }
 
             if character == Some(&'"'){
@@ -126,11 +135,10 @@ impl Scanner{
             char_vec.push(*character.unwrap());
         }
 
-        let string = char_vec.iter().collect();
-        Token::StringLiteral(string)
+        Ok(Token::StringLiteral(char_vec.iter().collect()))
     }
 
-    fn scan_number(&mut self) -> Token{
+    fn scan_number(&mut self) -> Result<Token, LuaError>{
         let mut had_decimal = false;
         let mut char_vec: Vec<char> = Vec::new();
         self.curr -= 1;
@@ -150,12 +158,12 @@ impl Scanner{
         let string: String = char_vec.iter().collect();
 
         match string.parse::<f64>(){
-            Ok(n) => Token::NumberLiteral(n),
-            Err(e) => panic!("Unable to parse number literal {}: {}", string, e),
+            Ok(n) => Ok(Token::NumberLiteral(n)),
+            Err(e) => error(format!("Unable to parse number literal {}: {}", string, e)),
         }
     }
 
-    fn scan_identifier(&mut self) -> Token{
+    fn scan_identifier(&mut self) -> Result<Token, LuaError>{
         let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
         let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), 
             Some(&')'), Some(&','), Some(&'\r'), Some(&';')];
@@ -170,17 +178,17 @@ impl Scanner{
             if let Some(c) = character_option{
                 char_vec.push(*c);   
             }else{
-                return Token::EOF;
+                return Ok(Token::EOF);
             }
         }
 
         let string: String = char_vec.iter().collect();
 
         if Keyword::is_keyword(&string){
-            return Token::Keyword(Keyword::from_string(&string));
+            return Ok(Token::Keyword(Keyword::from_string(&string)));
         }
 
-        Token::Identifier(string)
+        Ok(Token::Identifier(string))
     }
 
     fn char_at(&self, i: usize) -> Option<&char>{
@@ -200,7 +208,11 @@ impl Scanner{
 
 }
 
-pub fn scan(src: String) -> Vec<Token>{
+fn error(message: String) -> Result<Token, LuaError>{
+    Err(LuaError::create_lexical(&message))
+}
+
+pub fn scan(src: String) -> Result<Vec<Token>, Vec<LuaError>>{
     let scanner = Scanner::new(src);
 
     scanner.scan()

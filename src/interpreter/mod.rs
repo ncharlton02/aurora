@@ -129,7 +129,10 @@ impl Interpreter{
             Token::Identifier(x) => {
                 match tokens.get(1){
                     Some(Token::LeftParenthesis) => {
-                        let mut stmts = parser::parse(tokens.to_vec());
+                        let mut stmts = match parser::parse(tokens.to_vec()){
+                            Ok(x) => x,
+                            Err(e) => panic!("{}", e),
+                        };
 
                         match stmts.remove(0).stmt_type{
                             StmtType::FunctionCall(ref name, ref args) => self.run_function_call(name, args.to_vec()),

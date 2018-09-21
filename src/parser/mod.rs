@@ -4,6 +4,7 @@ pub mod expr;
 
 use std::collections::VecDeque;
 use super::{Token, BinOp, Stmt, StmtType, Expr, Keyword};
+use super::error::LuaError;
 
 struct Parser{
     tokens: VecDeque<Token>,
@@ -21,11 +22,11 @@ impl Parser{
         Parser {tokens: tokens_deque}
     }
     
-    fn parse(mut self) -> Vec<Stmt>{
+    fn parse(mut self) -> Result<Vec<Stmt>, LuaError>{
         let mut stmts: Vec<Stmt> = Vec::new();
 
         loop{
-            let stmt = self.scan_stmt();
+            let stmt = self.scan_stmt()?;
 
             if stmt.stmt_type == StmtType::EOF{
                 stmts.push(stmt);
@@ -35,14 +36,14 @@ impl Parser{
             stmts.push(stmt);
         }
 
-        stmts
+        Ok(stmts)
     }
 
-    fn scan_stmt(&mut self) -> Stmt{
+    fn scan_stmt(&mut self) -> Result<Stmt, LuaError>{
         let token = self.next_token();
 
         if token == None{
-            return Stmt {stmt_type: StmtType::EOF};
+            return Ok(Stmt {stmt_type: StmtType::EOF});
         }
 
         let token = token.unwrap();
@@ -55,34 +56,35 @@ impl Parser{
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
-                panic!("Stmt's cannot start with {:?}", token)
+                error(format!("Stmt's cannot start with {:?}", token))
             },
             Token::Newline => self.scan_stmt(),
-            Token::EOF => return Stmt {stmt_type : StmtType::EOF},
+            Token::EOF => return Ok(Stmt {stmt_type : StmtType::EOF}),
         }
     }
 
-    fn handle_return_stmt(&mut self) -> Stmt{
+    fn handle_return_stmt(&mut self) -> Result<Stmt, LuaError>{
         let value_tokens = self.advance_to(Token::Newline);
 
-        let expr = expr::parse(value_tokens);
-
-        Stmt{stmt_type: StmtType::Return(expr)}
+        match expr::parse(value_tokens){
+            Ok(expr) => Ok(Stmt{stmt_type: StmtType::Return(expr)}),
+            Err(e) => Err(e)
+        }
     }
 
-    fn handle_if_stmt(&mut self) -> Stmt{
+    fn handle_if_stmt(&mut self) -> Result<Stmt, LuaError>{
         let expr_tokens = self.advance_to(Token::Keyword(Keyword::Then));
-        let expr = expr::parse(expr_tokens);
+        let expr = expr::parse(expr_tokens)?;
         let (block_tokens, block_end) = self.advance_to_if_end();
-        let block = parse(block_tokens);
+        let block = parse(block_tokens)?;
 
         if block_end == Some(Keyword::Else) {
             let else_block_tokens = self.advance_to(Token::Keyword(Keyword::End));
 
-            return Stmt {stmt_type : StmtType::If(expr, block, Some(parse(else_block_tokens)))}
+            return Ok(Stmt {stmt_type : StmtType::If(expr, block, Some(parse(else_block_tokens)?))})
         }
 
-        Stmt{stmt_type : StmtType::If(expr, block, None)}
+        Ok(Stmt{stmt_type : StmtType::If(expr, block, None)})
     }
 
     fn advance_to_if_end(&mut self) -> (Vec<Token>, Option<Keyword>){
@@ -108,27 +110,28 @@ impl Parser{
     }
 
 
-    fn handle_func_dec(&mut self) -> Stmt{
-        let name = self.next_token().unwrap_or_else(||{
-            panic!("Expected token following keyword function!");
-        });
+    fn handle_func_dec(&mut self) -> Result<Stmt, LuaError>{
+        let name = match self.next_token(){
+            Some(x) => x,
+            None => return error(format!("Expected to find function name but found None")),
+        };
 
         //Remove left parenthesis
         match self.next_token(){
             Some(Token::LeftParenthesis) => (),
-            x => panic!("Expected left parenthesis but found {:?}", x),
+            x => return error(format!("Expected left parenthesis but found {:?}", x)),
         }
 
         let mut args = self.advance_to(Token::RightParenthesis);
         args.retain(|t| t != &Token::Comma);
 
         let block_tokens = self.advance_to_function_end();
-        let block = parse(block_tokens);
+        let block = parse(block_tokens)?;
 
         //Remove 'End'
         self.next_token();
 
-        Stmt{stmt_type : StmtType::FunctionDef(name, args, block)}
+        Ok(Stmt{stmt_type : StmtType::FunctionDef(name, args, block)})
     }
 
     fn advance_to_function_end(&mut self) -> Vec<Token>{
@@ -160,53 +163,59 @@ impl Parser{
         tokens
     }
 
-    fn handle_indentifier(&mut self, token: Token) -> Stmt{
+    fn handle_indentifier(&mut self, token: Token) -> Result<Stmt, LuaError>{
         let following_token = self.next_token();
 
         if let Some(following_token) = following_token{
             match following_token{
                 Token::LeftParenthesis =>{
                     let args = self.advance_to(Token::RightParenthesis);
-                    let stmt_type = StmtType::FunctionCall(token, self.parse_args(args));
+                    let stmt_type = StmtType::FunctionCall(token, self.parse_args(args)?);
 
-                    return Stmt {stmt_type};
+                    Ok(Stmt {stmt_type})
                 },
                 Token::Operator(BinOp::Equal) =>{
-                   self.scan_assignment(token, false)
+                  Ok(self.scan_assignment(token, false)?)
                 },
-                _ => panic!("Unknown token following identifier: {:?}", token),
+                _ => error(format!("Unknown token following identifier: {:?}", token)),
             }
         }else{
-            panic!("Files cannot end with identifiers!");
+            error(format!("Files cannot end with identifiers!"))
         }
     }
 
-    fn handle_local(&mut self) -> Stmt{
-        let name = self.next_token().unwrap_or_else(||{panic!("Expected token following keyword local, but found None!")});
+    fn handle_local(&mut self) -> Result<Stmt, LuaError>{
+        let name = match self.next_token(){
+            Some(x) => x,
+            None => return error(format!("Expected token following keyword local, but found None!"))
+        };
 
-        let equal_token = self.next_token().unwrap_or_else(||{panic!("Expected token '=' but found None!")});
+        let equal_token = match self.next_token(){
+            Some(x) => x,
+            None => return error(format!("Expected token '=' but found None!"))
+        };
 
         if equal_token != Token::Operator(BinOp::Equal){
-            panic!("Expected token '=' but found, {:?}", equal_token);
+            return error(format!("Expected token '=' but found, {:?}", equal_token));
         }
 
         self.scan_assignment(name, true)
     }
 
-    fn scan_assignment(&mut self, name: Token, is_local: bool) -> Stmt{
-        let expr = expr::parse(self.advance_to(Token::Newline));
+    fn scan_assignment(&mut self, name: Token, is_local: bool) -> Result<Stmt, LuaError>{
+        let expr = expr::parse(self.advance_to(Token::Newline))?;
         let stmt_type = StmtType::Assignment(name, expr, is_local);
 
-        return Stmt {stmt_type};
+        Ok(Stmt {stmt_type})
     }
 
-    fn parse_args(&self, args: Vec<Token>) -> Vec<Expr>{
-        let mut exprs = Vec::new();
+    fn parse_args(&self, args: Vec<Token>) -> Result<Vec<Expr>, LuaError>{
+        let mut exprs= Vec::new();
         let mut tokens = Vec::new();
 
         for token in args{
             if token == Token::Comma{
-                let expr = expr::parse(tokens.clone());
+                let expr = expr::parse(tokens.clone())?;
                 exprs.push(expr);
                 tokens.clear();
             }else{
@@ -215,10 +224,10 @@ impl Parser{
         }
 
         //Parse the last argument
-        let expr = expr::parse(tokens);
+        let expr = expr::parse(tokens)?;
         exprs.push(expr);
 
-        exprs
+        Ok(exprs)
     }
 
     fn advance_to(&mut self, stop: Token) -> Vec<Token>{
@@ -246,7 +255,11 @@ impl Parser{
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Vec<Stmt>{
+fn error(message: String) -> Result<Stmt, LuaError>{
+    Err(LuaError::create_parse(&message))
+}
+
+pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, LuaError>{
     let parser = Parser::new(tokens);
 
     parser.parse()

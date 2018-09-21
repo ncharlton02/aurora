@@ -2,12 +2,9 @@
 pub mod parser;
 pub mod interpreter;
 pub mod data;
+pub mod error;
 
-#[derive(Debug)]
-pub enum LuaResult{
-    Successful, 
-    Failure
-}
+use error::LuaError;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinOp{
@@ -152,19 +149,22 @@ pub struct Expr{
     expr_type: ExprType
 }
 
-pub fn run(src: String) -> LuaResult{
-    let tokens = parser::scanner::scan(src);
+pub fn run(src: String) -> Result<(), Vec<LuaError>>{
+    let tokens = parser::scanner::scan(src)?;
     print_token_info(&tokens);
     println!("");
 
-    let mut stmts = parser::parse(tokens);
+    let mut stmts = match parser::parse(tokens){
+        Ok(x) => x,
+        Err(e) => return Err(vec![e])
+    };
     print_stmt_info(&stmts);
 
     println!("\n---------- Running -------");
     interpreter::run(&mut stmts);
     println!("---------- Finished -------");
 
-    LuaResult::Successful
+    Ok(())
 }
 
 fn print_stmt_info(stmts: &Vec<Stmt>){

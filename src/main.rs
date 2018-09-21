@@ -6,7 +6,6 @@ use std::fs::File;
 use clap::{Arg, App};
 
 fn main() {
-
     let matches = App::new("aurora")
         .version("0.1.0")
         .author("Noah Charlton <ncharlton002@gmail.com>")
@@ -26,8 +25,14 @@ fn main() {
         "print(\"Hello World\")".to_string()
     };
 
-    let result = aurora::run(src);
-    println!("Result: {:?}", result);
+    match aurora::run(src){
+        Ok(_) => (),
+        Err(errors) => {
+            for e in errors{
+                println!("{}", e)
+            }
+        },
+    }
 }
 
 fn load_file(name: &str) -> String{
