@@ -36,17 +36,32 @@ fn run_toml_tests(){
 }
 
 fn run_toml_test(path: PathBuf){
-    let test_info: TestInfo = load_toml(path);
+    let test_info: TestInfo = load_toml(&path);
     println!("Running toml test: {:#?}", test_info);
 
     let lua_src = load_file(test_info.src);
-    let tokens = aurora::parser::scanner::scan(lua_src);
+    let tokens = match aurora::parser::scanner::scan(lua_src){
+        Ok(x) => x,
+        Err(errors) => {
+            println!("FAILED TO SCAN TEST: {:?}", path);
+            for e in errors{
+                println!("{}", e);
+            }
+
+            panic!();
+        },
+    };
 
     if let Some(num) = test_info.tokens{
         assert_eq!(tokens.len(), num);
     }
 
-    let mut stmts = aurora::parser::parse(tokens);
+    let mut stmts = match aurora::parser::parse(tokens){
+        Ok(x) => x,
+        Err(e) => {
+            panic!("{}", e);
+        }
+    };
 
     if let Some(num) = test_info.statements{
         let stmt_count = aurora::count_stmts_recur(&stmts);
@@ -72,7 +87,7 @@ fn run_toml_test(path: PathBuf){
 
 
 
-fn load_toml(path: PathBuf) -> TestInfo{
+fn load_toml(path: &PathBuf) -> TestInfo{
     let toml_str = load_file(path.to_str().unwrap().to_string());
     toml::from_str(&toml_str).unwrap()
 }
