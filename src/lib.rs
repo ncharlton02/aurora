@@ -3,8 +3,11 @@ pub mod parser;
 pub mod interpreter;
 pub mod data;
 pub mod error;
+pub mod config;
 
+use config::{Config, LogLevel};
 use error::LuaError;
+use interpreter::Interpreter;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinOp{
@@ -149,39 +152,76 @@ pub struct Expr{
     expr_type: ExprType
 }
 
-pub fn run(src: String) -> Result<(), Vec<LuaError>>{
-    let tokens = parser::scanner::scan(src)?;
-    print_token_info(&tokens);
-    println!("");
-
-    let mut stmts = match parser::parse(tokens){
-        Ok(x) => x,
-        Err(e) => return Err(vec![e])
-    };
-    print_stmt_info(&stmts);
-
-    println!("\n---------- Running -------");
-    match interpreter::run(&mut stmts){
-        Err(e) => return Err(vec![e]),
-        _ => (),
-    };
-    println!("---------- Finished -------");
-
-    Ok(())
+pub struct Aurora{
+    interpreter: Interpreter,
+    config: Config
 }
 
-fn print_stmt_info(stmts: &Vec<Stmt>){
-    println!("Stmt Count: {}", count_stmts_recur(stmts));
-
-    for stmt in stmts{
-        println!("{:#?}", stmt);
+impl Aurora{
+    
+    pub fn new(config: Config) -> Aurora{
+        Aurora{interpreter: Interpreter::new(), config: config}
     }
-}
 
-fn print_token_info(tokens: &Vec<Token>){
-    println!("Token Count: {}", tokens.len());
-
-    for token in tokens{
-        println!("{:?}", token);
+    pub fn register_function(&mut self, name: String, function: interpreter::function::Function){
+        self.interpreter.register_func(name, function);
     }
+
+    pub fn run(&mut self, src: String) -> Result<(), Vec<LuaError>>{
+        let tokens = parser::scanner::scan(src)?;
+        self.print_token_info(&tokens);
+
+        let mut stmts = match parser::parse(tokens){
+            Ok(x) => x,
+            Err(e) => return Err(vec![e])
+        };
+        self.print_stmt_info(&stmts);
+
+        match self.run_stmts(&mut stmts){
+            Err(e) => return Err(vec![e]),
+            _ => (),
+        };
+
+        Ok(())
+    }
+
+    pub fn run_stmts(&mut self, stmts: &mut Vec<Stmt>) -> Result<(), LuaError>{
+        if self.config.log_level == LogLevel::Verbose{
+            println!("\n---------- Running -------");
+        }
+
+        for stmt in stmts.iter_mut(){
+            self.interpreter.run_stmt(stmt)?;
+        }
+
+        if self.config.log_level == LogLevel::Verbose{
+            println!("\n---------- Finished -------");
+        }
+
+        Ok(())
+    }
+
+    fn print_token_info(&self, tokens: &Vec<Token>){
+        if self.config.log_level != LogLevel::Verbose{
+            return;
+        }
+
+        println!("Token Count: {}", tokens.len());
+        for token in tokens{
+            println!("{:?}", token);
+        }
+    }
+
+    fn print_stmt_info(&self, stmts: &Vec<Stmt>){
+        if self.config.log_level != LogLevel::Verbose{
+            return;
+        }
+
+        println!("Stmt Count: {}", count_stmts_recur(stmts));
+        for stmt in stmts{
+            println!("{:#?}", stmt);
+        }
+    }
+
+
 }
