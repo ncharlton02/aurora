@@ -5,7 +5,7 @@ use super::{data::*, error::LuaError};
 
 use self::function::{Function, LuaFunc};
 
-mod function;
+pub mod function;
 
 pub struct Interpreter{
     funcs: HashMap<String, Function>,
@@ -17,12 +17,23 @@ pub struct Interpreter{
 impl Interpreter{
 
     pub fn new() -> Interpreter{
-        Interpreter {
+        let mut interpreter = Interpreter {
             funcs: HashMap::new(), 
             globals: HashMap::new(),
             stack: vec![HashMap::new()],
             return_val: None,
-        }
+        };
+
+        interpreter.register_func("print".to_string(), Function::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+            for arg in args{
+                print!("{}\t", arg);
+            }
+
+            println!();
+            Ok(None)
+        }));
+
+        interpreter
     }
 
     pub fn register_func(&mut self, name: String, func: Function){
@@ -277,15 +288,6 @@ fn error(message: String) -> LuaError{
 
 pub fn run(stmts: &mut Vec<Stmt>) -> Result<Interpreter, LuaError>{
     let mut interpreter = Interpreter::new();
-
-    interpreter.register_func("print".to_string(), Function::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
-        for arg in args{
-            print!("{}\t", arg);
-        }
-
-        println!();
-        Ok(None)
-    }));
 
     for mut stmt in stmts.iter_mut(){
         match interpreter.run_stmt(&mut stmt){

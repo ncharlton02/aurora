@@ -6,12 +6,9 @@ repository = "https://github.com/DevOrc/aurora"
 readme = "README.md"
 license = "MIT"
 
-[[bin]]
-name = "bin"
-path = "src/main.rs"
-
 [dependencies]
 clap = "2.32.0"
+linefeed = "0.5"
 
 
 [dev-dependencies]

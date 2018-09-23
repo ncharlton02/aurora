@@ -224,8 +224,10 @@ impl Parser{
         }
 
         //Parse the last argument
-        let expr = expr::parse(tokens)?;
-        exprs.push(expr);
+        if tokens.len() > 0{
+            let expr = expr::parse(tokens)?;
+            exprs.push(expr);
+        }
 
         Ok(exprs)
     }
