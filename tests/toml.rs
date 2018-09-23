@@ -69,7 +69,14 @@ fn run_toml_test(path: PathBuf){
     }
 
     println!("--------- Running -------");
-    let interpreter = aurora::interpreter::run(&mut stmts);
+    let interpreter = match aurora::interpreter::run(&mut stmts){
+            Ok(x) => x,
+            Err(e) => {
+                println!("FAILED TO RUN TEST: {:?}", path);
+                println!("{}", e);
+                panic!();
+            }
+        };
     println!("--------- Finished -------");
 
     if let Some(vars) = test_info.test_variables{

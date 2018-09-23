@@ -161,7 +161,10 @@ pub fn run(src: String) -> Result<(), Vec<LuaError>>{
     print_stmt_info(&stmts);
 
     println!("\n---------- Running -------");
-    interpreter::run(&mut stmts);
+    match interpreter::run(&mut stmts){
+        Err(e) => return Err(vec![e]),
+        _ => (),
+    };
     println!("---------- Finished -------");
 
     Ok(())

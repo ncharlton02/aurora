@@ -13,7 +13,16 @@ fn run_lua_examples(){
 
         println!("Testing file: {}", path.display());
 
-        aurora::run(load_file(path.display().to_string()));
+        match aurora::run(load_file(path.display().to_string())){
+            Ok(_) => (),
+            Err(errors) => {
+                for e in errors{
+                    println!("{}", e)
+                }
+
+                panic!();
+            },
+        }
     }
 }
 
