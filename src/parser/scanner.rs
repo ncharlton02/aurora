@@ -4,13 +4,14 @@ use super::super::error::{LuaError};
 
 struct Scanner{
     src: Vec<char>,
-    curr: usize
+    curr: usize,
+    line_num: usize,
 }
 
 impl Scanner{
 
     pub fn new(src: String) -> Scanner{
-        Scanner{src : src.chars().collect(), curr : 0}
+        Scanner{src : src.chars().collect(), curr : 0, line_num: 0}
     }
 
     pub fn scan(mut self) -> Result<Vec<Token>, Vec<LuaError>>{
@@ -42,6 +43,8 @@ impl Scanner{
     }
 
     fn scan_token(&mut self) -> Result<Token, LuaError>{
+        let line = self.line_num.clone();
+
         let token = if let Some(c) = self.advance_character(){
             match c {
                 '(' => Some(Token::LeftParenthesis),
@@ -61,7 +64,7 @@ impl Scanner{
                 x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
                 n if n.is_numeric() => Some(Token::NumberLiteral(0.0)),
                 x => {
-                    return error(format!("Unknown Character: {}", x))
+                    return error(format!("Unknown Character: {}", x), line);
                 }
             }
         }else{
@@ -105,14 +108,15 @@ impl Scanner{
 
 
     fn check_elipse(&mut self) -> Result<Token, LuaError>{
+        let line = self.line_num.clone();
         let c = self.advance_character();
 
         if let Some(c) = c{
             if c != &'.'{
-                return error(format!("Expected ellipse, found: {}", c));
+                return error(format!("Expected ellipse, found: {}", c), line);
             }
         }else{
-            return error(format!("File cannot end with character '.'"));
+            return error(format!("File cannot end with character '.'"), line);
         }
 
         Ok(Token::Operator(BinOp::Concat))
@@ -159,7 +163,7 @@ impl Scanner{
 
         match string.parse::<f64>(){
             Ok(n) => Ok(Token::NumberLiteral(n)),
-            Err(e) => error(format!("Unable to parse number literal {}: {}", string, e)),
+            Err(e) => error(format!("Unable to parse number literal {}: {}", string, e), self.line_num),
         }
     }
 
@@ -203,14 +207,18 @@ impl Scanner{
         let c = self.src.get(self.curr);
         self.curr += 1;
 
+        if c == Some(&'\n'){
+            self.line_num += 1;
+        }
+
         c
     }
 
 }
 
-fn error(message: String) -> Result<Token, LuaError>{
-    Err(LuaError::create_lexical(&message))
-}
+fn error(message: String, line: usize) -> Result<Token, LuaError>{
+        Err(LuaError::create_lexical(&message, Some(format!("[Line {}]", line))))
+    }
 
 pub fn scan(src: String) -> Result<Vec<Token>, Vec<LuaError>>{
     let scanner = Scanner::new(src);
