@@ -11,7 +11,7 @@ struct Scanner{
 impl Scanner{
 
     pub fn new(src: String) -> Scanner{
-        Scanner{src : src.chars().collect(), curr : 0, line_num: 0}
+        Scanner{src : src.chars().collect(), curr : 0, line_num: 1}
     }
 
     pub fn scan(mut self) -> Result<Vec<Token>, Vec<LuaError>>{
@@ -51,7 +51,8 @@ impl Scanner{
                 ')' => Some(Token::RightParenthesis),
                 ',' => Some(Token::Comma),
                 '"' => Some(Token::StringLiteral(String::new())),
-                '\n' | ';' => Some(Token::Newline),
+                '\n' => Some(Token::Newline),
+                ';' => Some(Token::Semicolon),
                 '=' => Some(Token::Operator(BinOp::Equal)),
                 '+' => Some(Token::Operator(BinOp::Plus)),
                 '-' => Some(Token::Operator(BinOp::Minus)),

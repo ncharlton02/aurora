@@ -7,11 +7,12 @@ use super::super::{ExprType, error::LuaError};
 struct ExprParser{
     expr_type: ExprType,
     tokens: VecDeque<Token>,
+    line: usize
 }
 
 impl ExprParser{
 
-    fn new(tokens: Vec<Token>) -> ExprParser{
+    fn new(tokens: Vec<Token>, line: usize) -> ExprParser{
         let mut tokens_deque: VecDeque<Token> = VecDeque::new();
         let mut expr_type = ExprType::SingleValue;
 
@@ -36,7 +37,7 @@ impl ExprParser{
             }
         }
 
-        ExprParser {tokens: tokens_deque, expr_type: expr_type}
+        ExprParser {tokens: tokens_deque, expr_type: expr_type, line}
     }
     
     fn parse(mut self) -> Result<Vec<Stmt>, LuaError>{
@@ -97,12 +98,12 @@ impl ExprParser{
     fn scan_num_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
         let operator = match self.next_token(){
             Some(Token::Operator(operator)) => operator,
-            x => return error(format!("Expected binary operator but found {:?}", x)),
+            x => return error(format!("Expected binary operator but found {:?}", x), self.line),
         };
 
         let right = match self.next_token(){
             Some(x) => x,
-            _ => return error(format!("Expected token but found EOF")),
+            _ => return error(format!("Expected token but found EOF"), self.line),
         };
 
         Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
@@ -111,12 +112,12 @@ impl ExprParser{
     fn scan_string_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
         let operator = match self.next_token(){
             Some(Token::Operator(BinOp::Concat)) => BinOp::Concat,
-            x => return error(format!("Expected binary operator but found {:?}", x)),
+            x => return error(format!("Expected binary operator but found {:?}", x), self.line),
         };
 
         let right = match self.next_token(){
             Some(x) => x,
-            _ => return error(format!("Expected token but found EOF")),
+            _ => return error(format!("Expected token but found EOF"), 20),
         };
 
         Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
@@ -127,8 +128,8 @@ impl ExprParser{
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<Expr, LuaError>{
-    let parser = ExprParser::new(tokens);
+pub fn parse(tokens: Vec<Token>, line: usize) -> Result<Expr, LuaError>{
+    let parser = ExprParser::new(tokens, line);
     let expr_type = parser.expr_type.clone();
     
     Ok(Expr{expr_type: expr_type, stmts: parser.parse()?})

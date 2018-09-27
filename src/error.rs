@@ -18,7 +18,7 @@ pub struct LuaError{
 impl fmt::Display for LuaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let location = if let Some(ref x) = self.location{
-            format!(" {}", x)
+            format!(" at {}", x)
         }else{
             String::new()
         };
@@ -41,8 +41,8 @@ impl LuaError{
         LuaError::create(message, ErrorType::Lexical, location)
     }
 
-    pub fn create_parse(message: &str) -> LuaError{
-        LuaError::create(message, ErrorType::Parse, None)
+    pub fn create_parse(message: &str, location: Option<String>) -> LuaError{
+        LuaError::create(message, ErrorType::Parse, location)
     }
 
     pub fn create_runtime(message: &str) -> LuaError{

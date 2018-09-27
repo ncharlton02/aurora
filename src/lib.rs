@@ -68,6 +68,7 @@ pub enum Token{
     Keyword(Keyword),
     LeftParenthesis,
     RightParenthesis,
+    Semicolon,
     Newline,
     Comma,
     EOF 

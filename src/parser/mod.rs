@@ -8,6 +8,7 @@ use super::error::LuaError;
 
 struct Parser{
     tokens: VecDeque<Token>,
+    line: usize
 }
 
 impl Parser{
@@ -19,7 +20,7 @@ impl Parser{
             tokens_deque.push_back(token);
         }
 
-        Parser {tokens: tokens_deque}
+        Parser {tokens: tokens_deque, line: 1}
     }
     
     fn parse(mut self) -> Result<Vec<Stmt>, LuaError>{
@@ -56,17 +57,21 @@ impl Parser{
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
-                error(format!("Stmt's cannot start with {:?}", token))
+                error(format!("Stmt's cannot start with {:?}", token), self.line)
             },
-            Token::Newline => self.scan_stmt(),
+            Token::Newline => {
+                self.line += 1;
+                self.scan_stmt()
+            },
+            Token::Semicolon => self.scan_stmt(),
             Token::EOF => return Ok(Stmt {stmt_type : StmtType::EOF}),
         }
     }
 
     fn handle_return_stmt(&mut self) -> Result<Stmt, LuaError>{
-        let value_tokens = self.advance_to(Token::Newline);
+        let value_tokens = self.advance_to_mult(vec![Token::Newline, Token::Semicolon]);
 
-        match expr::parse(value_tokens){
+        match expr::parse(value_tokens, self.line){
             Ok(expr) => Ok(Stmt{stmt_type: StmtType::Return(expr)}),
             Err(e) => Err(e)
         }
@@ -74,7 +79,7 @@ impl Parser{
 
     fn handle_if_stmt(&mut self) -> Result<Stmt, LuaError>{
         let expr_tokens = self.advance_to(Token::Keyword(Keyword::Then));
-        let expr = expr::parse(expr_tokens)?;
+        let expr = expr::parse(expr_tokens, self.line)?;
         let (block_tokens, block_end) = self.advance_to_if_end();
         let block = parse(block_tokens)?;
 
@@ -113,13 +118,13 @@ impl Parser{
     fn handle_func_dec(&mut self) -> Result<Stmt, LuaError>{
         let name = match self.next_token(){
             Some(x) => x,
-            None => return error(format!("Expected to find function name but found None")),
+            None => return error(format!("Expected to find function name but found None"), self.line),
         };
 
         //Remove left parenthesis
         match self.next_token(){
             Some(Token::LeftParenthesis) => (),
-            x => return error(format!("Expected left parenthesis but found {:?}", x)),
+            x => return error(format!("Expected left parenthesis but found {:?}", x), self.line),
         }
 
         let mut args = self.advance_to(Token::RightParenthesis);
@@ -177,33 +182,33 @@ impl Parser{
                 Token::Operator(BinOp::Equal) =>{
                   Ok(self.scan_assignment(token, false)?)
                 },
-                _ => error(format!("Unknown token following identifier: {:?}", token)),
+                _ => error(format!("Unknown token following identifier: {:?}", token), self.line),
             }
         }else{
-            error(format!("Files cannot end with identifiers!"))
+            error(format!("Files cannot end with identifiers!"), self.line)
         }
     }
 
     fn handle_local(&mut self) -> Result<Stmt, LuaError>{
         let name = match self.next_token(){
             Some(x) => x,
-            None => return error(format!("Expected token following keyword local, but found None!"))
+            None => return error(format!("Expected token following keyword local, but found None!"), self.line)
         };
 
         let equal_token = match self.next_token(){
             Some(x) => x,
-            None => return error(format!("Expected token '=' but found None!"))
+            None => return error(format!("Expected token '=' but found None!"), self.line)
         };
 
         if equal_token != Token::Operator(BinOp::Equal){
-            return error(format!("Expected token '=' but found, {:?}", equal_token));
+            return error(format!("Expected token '=' but found, {:?}", equal_token), self.line);
         }
 
         self.scan_assignment(name, true)
     }
 
     fn scan_assignment(&mut self, name: Token, is_local: bool) -> Result<Stmt, LuaError>{
-        let expr = expr::parse(self.advance_to(Token::Newline))?;
+        let expr = expr::parse(self.advance_to_mult(vec![Token::Newline, Token::Semicolon]), self.line)?;
         let stmt_type = StmtType::Assignment(name, expr, is_local);
 
         Ok(Stmt {stmt_type})
@@ -215,7 +220,7 @@ impl Parser{
 
         for token in args{
             if token == Token::Comma{
-                let expr = expr::parse(tokens.clone())?;
+                let expr = expr::parse(tokens.clone(), self.line)?;
                 exprs.push(expr);
                 tokens.clear();
             }else{
@@ -225,7 +230,7 @@ impl Parser{
 
         //Parse the last argument
         if tokens.len() > 0{
-            let expr = expr::parse(tokens)?;
+            let expr = expr::parse(tokens, self.line)?;
             exprs.push(expr);
         }
 
@@ -233,13 +238,17 @@ impl Parser{
     }
 
     fn advance_to(&mut self, stop: Token) -> Vec<Token>{
+        self.advance_to_mult(vec![stop])
+    }
+
+    fn advance_to_mult(&mut self, stop: Vec<Token>)-> Vec<Token>{
         let mut tokens = Vec::new();
 
         loop{
             let token = self.next_token();
 
             if let Some(token) = token{
-                if token == stop || token == Token::EOF{
+                if stop.contains(&token) || token == Token::EOF{
                     break;
                 }
 
@@ -257,8 +266,8 @@ impl Parser{
     }
 }
 
-fn error(message: String) -> Result<Stmt, LuaError>{
-    Err(LuaError::create_parse(&message))
+fn error(message: String, line: usize) -> Result<Stmt, LuaError>{
+    Err(LuaError::create_parse(&message, Some(format!("Line {}", line))))
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, LuaError>{
