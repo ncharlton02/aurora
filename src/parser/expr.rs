@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use super::{Token, BinOp, Stmt, StmtType, Expr, error};
+use super::{Token, BinOp, Stmt, StmtType, Expr, error, Keyword};
 use super::super::{ExprType, error::LuaError};
 
 struct ExprParser{
@@ -58,30 +58,34 @@ impl ExprParser{
     }
 
     fn scan_stmt(&mut self) -> Result<Stmt, LuaError>{
-        let token = self.next_token();
-
-        if token == None{
+        if let Some(token) = self.peek(){
+            if token == &Token::Newline || token == &Token::Semicolon{
+                return error("Expressions cannot have newlines or semicolons!".to_string(), self.line);
+            }
+        }else{
             return Ok(Stmt {stmt_type: StmtType::EOF});
         }
 
-        let token = token.unwrap();
-        
         match self.expr_type{
-            ExprType::Number | ExprType::Bool => self.scan_num_expr(token),
-            ExprType::Str => self.scan_string_expr(token),
-            ExprType::SingleValue => self.scan_value(token),
+            ExprType::Number | ExprType::Bool => self.scan_num_expr(),
+            ExprType::Str => self.scan_string_expr(),
+            ExprType::SingleValue => self.scan_value(),
         }
     }
 
-    fn scan_value(&mut self, token: Token) -> Result<Stmt, LuaError>{
+    fn scan_value(&mut self) -> Result<Stmt, LuaError>{
+        let token = self.next_token().unwrap();
         let mut tokens = vec![token];
+
+        if is_literal_value(&tokens[0]){
+            return Ok(Stmt{stmt_type: StmtType::Value(tokens)});
+        }
 
         loop{
             let next_token = self.next_token();
 
             if let Some(token) = next_token{
-
-                if token == Token::EOF || token == Token::Newline{
+                 if token == Token::EOF || token == Token::Newline{
                     tokens.push(token);
                     break;
                 }
@@ -95,36 +99,87 @@ impl ExprParser{
         Ok(Stmt{stmt_type: StmtType::Value(tokens)})
     }
 
-    fn scan_num_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
-        let operator = match self.next_token(){
-            Some(Token::Operator(operator)) => operator,
-            x => return error(format!("Expected binary operator but found {:?}", x), self.line),
+    fn scan_num_expr(&mut self) -> Result<Stmt, LuaError>{
+        let (left, operator_token) = self.scan_until(|x| is_operator(x))?;
+
+        let operator = match operator_token{
+            Token::Operator(operator) => operator,
+            x => return error(format!("Expected binary operator but found {:?}; {:?}", x, left), self.line),
         };
 
-        let right = match self.next_token(){
-            Some(x) => x,
-            _ => return error(format!("Expected token but found EOF"), self.line),
-        };
+        let right = self.scan_until(|x| {
+            match x{
+                Token::Semicolon | Token::Newline | Token::RightParenthesis => false,
+                _ => false,
+            }
+        })?.0;
 
-        Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
+        Ok(Stmt{stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
     }
 
-    fn scan_string_expr(&mut self, left: Token) -> Result<Stmt, LuaError>{
-        let operator = match self.next_token(){
-            Some(Token::Operator(BinOp::Concat)) => BinOp::Concat,
-            x => return error(format!("Expected binary operator but found {:?}", x), self.line),
+    fn scan_string_expr(&mut self) -> Result<Stmt, LuaError>{
+        let (left, operator_token) = self.scan_until(|x| is_operator(x))?;
+
+        let operator = match operator_token{
+            Token::Operator(BinOp::Concat) => BinOp::Concat,
+            x => return error(format!("Expected string concat operator but found {:?}", x), self.line),
         };
 
-        let right = match self.next_token(){
-            Some(x) => x,
-            _ => return error(format!("Expected token but found EOF"), 20),
-        };
+        let right = self.scan_until(|x| {
+            match x{
+                Token::Semicolon | Token::Newline | Token::RightParenthesis => false,
+                _ => false,
+            }
+        })?.0;
 
-        Ok(Stmt{stmt_type: StmtType::BinOp(operator, left, right)})
+        Ok(Stmt{stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
+    }
+
+    fn scan_until<F>(&mut self, mut f: F) -> Result<(Vec<Token>, Token), LuaError> where F: FnMut(&Token) -> bool{
+        let mut tokens = Vec::new();
+        let mut level = 0;
+
+        loop{
+            let token = self.next_token().unwrap_or(Token::EOF);
+
+            if token == Token::LeftParenthesis{
+                level += 1;
+                continue;
+            }else if token == Token::RightParenthesis{
+                level -= 1;
+                continue;
+            }
+
+            if (f(&token) && level == 0)|| token == Token::EOF{
+                break Ok((tokens, token));
+            }
+
+            tokens.push(token);
+        }
+    }
+
+    fn peek(&self) -> Option<&Token>{
+        self.tokens.get(0)
     }
 
     fn next_token(&mut self) -> Option<Token>{
-        self.tokens.pop_front()
+        let token = self.tokens.pop_front();
+        token
+    }
+}
+
+fn is_operator(token: &Token) -> bool{
+    match token{
+        Token::Operator(_) => true,
+        _ => false,
+    }
+}
+
+fn is_literal_value(token: &Token) -> bool{
+    match token{
+        Token::NumberLiteral(_) | Token::StringLiteral(_) | 
+        Token::Keyword(Keyword::False) | Token::Keyword(Keyword::True) => true,
+        _ => false
     }
 }
 

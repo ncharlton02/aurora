@@ -99,7 +99,7 @@ pub enum StmtType{
     ///Name, Assignment, Is Local,
     Assignment(Token, Expr, bool),
     ///Operator, Left Token, Right Token
-    BinOp(BinOp, Token, Token),
+    BinOp(BinOp, Expr, Expr),
     ///A single token value
     Value(Vec<Token>),
     ///Condition, Stmts, Else
@@ -143,7 +143,14 @@ pub fn count_stmts_recur(stmts: &Vec<Stmt>) -> u32{
 
 #[derive(Debug, PartialEq, Clone)]
 enum ExprType{
-    Str, Number, Bool, SingleValue
+    /// Contains a string concat
+    Str, 
+    // Contains a number bin op (+, -, etc.)
+    Number, 
+    // Contains a bool bin op (==, <, <=, etc.)
+    Bool,
+    // A single value i.e. '55' or '"Hello World"'
+    SingleValue
 }
 
 

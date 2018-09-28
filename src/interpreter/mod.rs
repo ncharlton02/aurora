@@ -136,12 +136,12 @@ impl Interpreter{
         
         match stmt.stmt_type{
             StmtType::BinOp(ref operator, ref left, ref right) => Ok(self.evaluate_bin_op(operator, left, right)?),
-            StmtType::Value(ref tokens) => Ok(self.evaluate_value_token(tokens)?),
+            StmtType::Value(ref tokens) => Ok(self.evaluate_value_expr(tokens)?),
             ref x => Err(error(format!("Couldn't evaluate expression: {:?}", x))),
         }
     }
 
-    fn evaluate_value_token(&mut self, tokens: &Vec<Token>) -> Result<LuaData, LuaError>{
+    fn evaluate_value_expr(&mut self, tokens: &Vec<Token>) -> Result<LuaData, LuaError>{
         let first_token = tokens.get(0).unwrap();
 
         Ok(match first_token{
@@ -176,17 +176,17 @@ impl Interpreter{
         })
     }
 
-    fn evaluate_bin_op(&self, operator: &BinOp, left: &Token, right: &Token) -> Result<LuaData, LuaError>{   
+    fn evaluate_bin_op(&mut self, operator: &BinOp, left: &Expr, right: &Expr) -> Result<LuaData, LuaError>{   
         Ok(match operator{
             BinOp::Concat => self.evaluate_str_binop(left, right)?,
             _ => self.evaluate_num_binop(operator, left, right)?,
         })
     }
 
-    fn evaluate_num_binop(&self, operator: &BinOp, left: &Token, right: &Token) -> Result<LuaData, LuaError>{
-        let left_num = self.token_to_num(left)?;
+    fn evaluate_num_binop(&mut self, operator: &BinOp, left: &Expr, right: &Expr) -> Result<LuaData, LuaError>{
+        let left_num = self.expr_to_num(left)?;
 
-        let right_num = self.token_to_num(right)?;
+        let right_num = self.expr_to_num(right)?;
 
         Ok(match operator{
             BinOp::Plus => LuaData::Number(left_num + right_num),
@@ -201,48 +201,32 @@ impl Interpreter{
         })
     }
 
-    fn evaluate_str_binop(&self, left: &Token, right: &Token) -> Result<LuaData, LuaError>{
-        let left_string = self.token_to_string(left)?;
-        let right_string = self.token_to_string(right)?;
+    fn evaluate_str_binop(&mut self, left: &Expr, right: &Expr) -> Result<LuaData, LuaError>{
+        let left_string = self.expr_to_string(left)?;
+        let right_string = self.expr_to_string(right)?;
 
         Ok(LuaData::Str(format!("{}{}", left_string, right_string)))
     }
 
-    fn token_to_string(&self, token: &Token) -> Result<String, LuaError>{
-        match token{
-            Token::StringLiteral(x) => Ok(x.to_string()),
-            Token::NumberLiteral(x) => Ok(format!("{}", x)),
-            Token::Identifier(x) => {
-                let var = self.get_variable(x.to_string());
+    fn expr_to_string(&mut self, expr: &Expr) -> Result<String, LuaError>{
+        let value = self.evaluate_expr(expr)?;
 
-                if let Some(var) = var{
-                    Ok(format!("{}", var).to_string())
-                }else{
-                    Ok("nil".to_string())
-                }
-            }
-            _ => Err(error(format!("Couldn't convert token to string: {:?}", token))),
+        match value{
+            LuaData::Str(x) => Ok(x),
+            LuaData::Bool(x) => Ok(format!("{}", x)),
+            LuaData::Number(x) => Ok(format!("{}", x)),
+            LuaData::Nil => Ok("nil".to_string()),
         }
     }
 
-     fn token_to_num(&self, token: &Token) -> Result<f64, LuaError>{
-        match token{
-            Token::NumberLiteral(x) => Ok(*x),
-            Token::Identifier(x) => {
-                let var = self.get_variable(x.to_string());
+     fn expr_to_num(&mut self, expr: &Expr) -> Result<f64, LuaError>{
+        let value = self.evaluate_expr(expr)?;
 
-                if let Some(var) = var{
-                    match var{
-                        LuaData::Number(x) => Ok(*x),
-                        LuaData::Bool(true) => Ok(1.0),
-                        LuaData::Bool(false) => Ok(0.0),
-                        x => Err(error(format!("Couldn't convert type to number: {:?}", x))),
-                    }
-                }else{
-                    Ok(0.0)
-                }
-            }
-            _ => Err(error(format!("Couldn't convert token to string: {:?}", token))),
+        match value{
+            LuaData::Number(x) => Ok(x),
+            LuaData::Bool(false) => Ok(0.0),
+            LuaData::Bool(true) => Ok(1.0),
+            x => Err(error(format!("Couldn't convert value to number: {:?}", x))),
         }
     }
 

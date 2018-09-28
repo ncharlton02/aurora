@@ -1,2 +1,3 @@
-print("Hello World!")
-print("This is lua...")
+name = "John" .. " Doe"
+age = 17
+print(name, age)
