@@ -174,7 +174,7 @@ impl Parser{
         if let Some(following_token) = following_token{
             match following_token{
                 Token::LeftParenthesis =>{
-                    let args = self.advance_to(Token::RightParenthesis);
+                    let args = self.advance_to_args_end();
                     let stmt_type = StmtType::FunctionCall(token, self.parse_args(args)?);
 
                     Ok(Stmt {stmt_type})
@@ -187,6 +187,32 @@ impl Parser{
         }else{
             error(format!("Files cannot end with identifiers!"), self.line)
         }
+    }
+
+    fn advance_to_args_end(&mut self) -> Vec<Token>{
+        let mut tokens = Vec::new();
+        let mut level = 0;
+
+        loop{
+            let token = self.next_token();
+
+            if let Some(token) = token{
+                if token == Token::LeftParenthesis{
+                    level += 1;
+                }else if token == Token::RightParenthesis{
+                    if level == 0{
+                        break;
+                    }
+                    level -= 1;
+                }
+
+                tokens.push(token);
+            }else{
+                break;
+            }
+        }
+
+        tokens
     }
 
     fn handle_local(&mut self) -> Result<Stmt, LuaError>{

@@ -33,6 +33,21 @@ impl Interpreter{
             Ok(None)
         }));
 
+        interpreter.register_func("assert".to_string(), Function::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+            if args.len() != 2{
+                return Err(error(format!("Expected 2 arguments, found: {:?}", args)));
+            }
+            
+            let left = &args[0];
+            let right = &args[1];
+
+            if left != right{
+                return Err(error(format!("Assert failed! Left: {:?}, Right: {:?}", left, right)));
+            }
+
+            Ok(None)
+        }));
+
         interpreter
     }
 
