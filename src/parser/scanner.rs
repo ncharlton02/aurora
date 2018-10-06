@@ -80,10 +80,34 @@ impl Scanner{
                 Token::Operator(BinOp::Concat) => self.check_elipse(),
                 Token::Operator(BinOp::GreaterThan) => self.scan_greater_than(),
                 Token::Operator(BinOp::LessThan) => self.scan_less_than(),
+                Token::Operator(BinOp::Minus) => self.check_comment(),
                 x => Ok(x)
             }
         }else{
             self.scan_token()
+        }
+    }
+
+    fn check_comment(&mut self) -> Result<Token, LuaError>{
+        if self.peek() == Some(&'-'){
+            //Scan comment
+            return self.scan_until_comment_end();
+        }
+
+        Ok(Token::Operator(BinOp::Minus))
+    }
+
+    fn scan_until_comment_end(&mut self) -> Result<Token, LuaError>{
+        loop{
+            let c = self.advance_character();
+
+            if let Some(c) = c{
+                if *c == '\n'{
+                    return Ok(Token::Newline);
+                }
+            }else{
+                return Ok(Token::EOF);
+            }
         }
     }
 

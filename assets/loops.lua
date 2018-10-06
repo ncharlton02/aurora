@@ -1,3 +1,4 @@
+-- Count to five
 count = 0;
 
 while count < 5 do

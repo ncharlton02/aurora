@@ -1,3 +1,4 @@
+-- Calculates the first 50 fibonacci numbers
 times = 50
 
 function fib(x, y, count)

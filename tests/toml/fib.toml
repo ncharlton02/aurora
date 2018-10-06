@@ -1,5 +1,5 @@
 src="assets/fib.lua"
-tokens=75
+tokens=76
 statements=14
 
 [test_variables]
