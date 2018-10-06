@@ -55,6 +55,7 @@ impl Parser{
             Token::Keyword(Keyword::If) => self.handle_if_stmt(),
             Token::Keyword(Keyword::Function) => self.handle_func_dec(),
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
+            Token::Keyword(Keyword::While) => self.handle_while_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
                 error(format!("Stmt's cannot start with {:?}", token), self.line)
@@ -75,6 +76,15 @@ impl Parser{
             Ok(expr) => Ok(Stmt{stmt_type: StmtType::Return(expr)}),
             Err(e) => Err(e)
         }
+    }
+
+    fn handle_while_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let expr_tokens = self.advance_to(Token::Keyword(Keyword::Do));
+        let expr = expr::parse(expr_tokens, self.line)?;
+        let block_tokens = self.advance_to_block_end();
+        let block = parse(block_tokens)?;
+
+        Ok(Stmt{stmt_type : StmtType::While(expr, block)})
     }
 
     fn handle_if_stmt(&mut self) -> Result<Stmt, LuaError>{
@@ -130,7 +140,7 @@ impl Parser{
         let mut args = self.advance_to(Token::RightParenthesis);
         args.retain(|t| t != &Token::Comma);
 
-        let block_tokens = self.advance_to_function_end();
+        let block_tokens = self.advance_to_block_end();
         let block = parse(block_tokens)?;
 
         //Remove 'End'
@@ -139,7 +149,7 @@ impl Parser{
         Ok(Stmt{stmt_type : StmtType::FunctionDef(name, args, block)})
     }
 
-    fn advance_to_function_end(&mut self) -> Vec<Token>{
+    fn advance_to_block_end(&mut self) -> Vec<Token>{
         let mut tokens = Vec::new();
         let mut level = 0;
 

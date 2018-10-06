@@ -25,13 +25,13 @@ pub enum BinOp{
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword{
-    True, False, If, Then, Else, End, Function, Return, Local
+    True, False, If, Then, Else, End, Function, Return, Local, While, Do
 }
 
 impl Keyword{
 
     pub fn vec() -> Vec<String>{
-        vec!["true", "false", "if", "else", "then", "end", "function", "return", "local"].iter().map(|x| x.to_string()).collect()
+        vec!["true", "false", "if", "else", "then", "end", "function", "return", "local", "while", "do"].iter().map(|x| x.to_string()).collect()
     }
 
     pub fn is_keyword(string: &str) -> bool{
@@ -53,6 +53,8 @@ impl Keyword{
             "function" => Keyword::Function,
             "return" => Keyword::Return,
             "local" => Keyword::Local,
+            "while" => Keyword::While,
+            "do" => Keyword::Do,
             _ => panic!("Couldn't convert string to keyword: {}", string),
         }
     }
@@ -104,6 +106,8 @@ pub enum StmtType{
     Value(Vec<Token>),
     ///Condition, Stmts, Else
     If(Expr, Vec<Stmt>, Option<Vec<Stmt>>),
+    //Condition, Block
+    While(Expr, Vec<Stmt>),
     Return(Expr),
     EOF
 }
@@ -123,7 +127,7 @@ impl StmtType{
 
                 count
             },
-            StmtType::FunctionDef(_, _, block) => {
+            StmtType::FunctionDef(_, _, block) | StmtType::While(_, block) => {
                 1 + count_stmts_recur(block)
             } 
         }

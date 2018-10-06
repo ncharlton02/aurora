@@ -86,6 +86,7 @@ impl Interpreter{
             StmtType::Assignment(ref name, ref expr, ref is_local) => self.handle_assignment(name, expr, *is_local),
             StmtType::BinOp(_, _, _) | StmtType::Value(_) => panic!("Illegal Root Stmt: {:?}", stmt),
             StmtType::Return(ref expr) => self.handle_return(expr),
+            StmtType::While(ref expr, ref mut stmts) => self.run_while_loop(expr, stmts),
             StmtType::FunctionCall(ref name, ref args) => {
                 match self.run_function_call(name, args.to_vec()){
                     Ok(_) => Ok(()),
@@ -114,12 +115,18 @@ impl Interpreter{
         Ok(())
     }
 
+    fn run_while_loop(&mut self, expr: &Expr, stmts: &mut Vec<Stmt>) -> Result<(), LuaError>{
+        while self.should_run(expr)?{
+            for stmt in stmts.iter_mut(){
+                self.run_stmt(stmt)?;
+            }
+        }
+
+        Ok(())
+    }
 
     fn run_if_stmt(&mut self, expr: &Expr, stmts: &mut Vec<Stmt>, else_block: &mut Option<Vec<Stmt>>) -> Result<(), LuaError>{
-        let should_run = match self.evaluate_expr(expr)?{
-            LuaData::Bool(b) => b,
-            x => return Err(error(format!("Expected boolean but found {}", x))),
-        };
+        let should_run = self.should_run(expr)?;
 
         if should_run{
             for stmt in stmts{
@@ -132,6 +139,13 @@ impl Interpreter{
         }
 
         Ok(())
+    }
+
+    fn should_run(&mut self, expr: &Expr) -> Result<bool, LuaError>{
+        Ok(match self.evaluate_expr(expr)?{
+            LuaData::Bool(b) => b,
+            x => return Err(error(format!("Expected boolean but found {}", x))),
+        })
     }
 
     fn handle_assignment(&mut self, name: &Token, expr: &Expr, is_local: bool) -> Result<(), LuaError>{
