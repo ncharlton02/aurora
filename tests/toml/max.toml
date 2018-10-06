@@ -1,6 +1,6 @@
 src="assets/max.lua"
-tokens=48
-statements=11
+tokens=43
+statements=10
 
 [test_variables]
 names=["bigger_num", "result"]
