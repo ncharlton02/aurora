@@ -142,10 +142,7 @@ impl Interpreter{
     }
 
     fn should_run(&mut self, expr: &Expr) -> Result<bool, LuaError>{
-        Ok(match self.evaluate_expr(expr)?{
-            LuaData::Bool(b) => b,
-            x => return Err(error(format!("Expected boolean but found {}", x))),
-        })
+        Ok(self.evaluate_expr(expr)?.to_bool())
     }
 
     fn handle_assignment(&mut self, name: &Token, expr: &Expr, is_local: bool) -> Result<(), LuaError>{
@@ -240,23 +237,13 @@ impl Interpreter{
     fn expr_to_string(&mut self, expr: &Expr) -> Result<String, LuaError>{
         let value = self.evaluate_expr(expr)?;
 
-        match value{
-            LuaData::Str(x) => Ok(x),
-            LuaData::Bool(x) => Ok(format!("{}", x)),
-            LuaData::Number(x) => Ok(format!("{}", x)),
-            LuaData::Nil => Ok("nil".to_string()),
-        }
+        Ok(value.to_string())
     }
 
      fn expr_to_num(&mut self, expr: &Expr) -> Result<f64, LuaError>{
         let value = self.evaluate_expr(expr)?;
 
-        match value{
-            LuaData::Number(x) => Ok(x),
-            LuaData::Bool(false) => Ok(0.0),
-            LuaData::Bool(true) => Ok(1.0),
-            x => Err(error(format!("Couldn't convert value to number: {:?}", x))),
-        }
+        Ok(value.to_num())
     }
 
     fn run_function_call(&mut self, name: &Token, args: Vec<Expr>) -> Result<LuaData, LuaError>{        
