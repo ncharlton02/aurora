@@ -44,52 +44,38 @@ impl Scanner{
 
     fn scan_token(&mut self) -> Result<Token, LuaError>{
         let line = self.line_num.clone();
+        let next_char = self.advance_character().clone();
 
-        let token = if let Some(c) = self.advance_character(){
+        if let Some(c) = next_char{
             match c {
-                '(' => Some(Token::LeftParenthesis),
-                ')' => Some(Token::RightParenthesis),
-                ',' => Some(Token::Comma),
-                '"' => Some(Token::StringLiteral(String::new())),
-                '\n' => Some(Token::Newline),
-                ';' => Some(Token::Semicolon),
-                '=' => Some(Token::Operator(BinOp::Equal)),
-                '+' => Some(Token::Operator(BinOp::Plus)),
-                '-' => Some(Token::Operator(BinOp::Minus)),
-                '*' => Some(Token::Operator(BinOp::Multiply)),
-                '/' => Some(Token::Operator(BinOp::Divide)),
-                '.' => Some(Token::Operator(BinOp::Concat)),  
-                '<' => Some(Token::Operator(BinOp::LessThan)),
-                '>' => Some(Token::Operator(BinOp::GreaterThan)),
-                ' ' | '\t' | '\r' => None,
-                x if x.is_alphabetic() => Some(Token::Identifier(String::new())),
-                n if n.is_numeric() => Some(Token::NumberLiteral(0.0)),
+                '(' => Ok(Token::LeftParenthesis),
+                ')' => Ok(Token::RightParenthesis),
+                ',' => Ok(Token::Comma),
+                '"' => self.scan_string(),
+                '\n' => Ok(Token::Newline),
+                ';' => Ok(Token::Semicolon),
+                '=' => Ok(Token::Operator(BinOp::Equal)),
+                '+' => Ok(Token::Operator(BinOp::Plus)),
+                '-' => self.check_comment(),
+                '*' => Ok(Token::Operator(BinOp::Multiply)),
+                '/' => Ok(Token::Operator(BinOp::Divide)),
+                '.' => self.check_elipse(),  
+                '<' => self.scan_less_than(),
+                '>' => self.scan_greater_than(),
+                ' ' | '\t' | '\r' => self.scan_token(),
+                x if x.is_alphabetic() => self.scan_identifier(),
+                n if n.is_numeric() => self.scan_number(),
                 x => {
                     return error(format!("Unknown Character: {}", x), line);
                 }
             }
         }else{
-            Some(Token::EOF)
-        };
-
-        if let Some(token) = token{
-            match token{
-                Token::StringLiteral(_) => self.scan_string(),
-                Token::Identifier(_) => self.scan_identifier(),
-                Token::NumberLiteral(_) => self.scan_number(),
-                Token::Operator(BinOp::Concat) => self.check_elipse(),
-                Token::Operator(BinOp::GreaterThan) => self.scan_greater_than(),
-                Token::Operator(BinOp::LessThan) => self.scan_less_than(),
-                Token::Operator(BinOp::Minus) => self.check_comment(),
-                x => Ok(x)
-            }
-        }else{
-            self.scan_token()
+            Ok(Token::EOF)
         }
     }
 
     fn check_comment(&mut self) -> Result<Token, LuaError>{
-        if self.peek() == Some(&'-'){
+        if self.peek() == Some('-'){
             //Scan comment
             return self.scan_until_comment_end();
         }
@@ -102,7 +88,7 @@ impl Scanner{
             let c = self.advance_character();
 
             if let Some(c) = c{
-                if *c == '\n'{
+                if c == '\n'{
                     return Ok(Token::Newline);
                 }
             }else{
@@ -112,7 +98,7 @@ impl Scanner{
     }
 
     fn scan_greater_than(&mut self) -> Result<Token, LuaError>{
-        if self.advance_character().unwrap_or(&' ') == &'='{
+        if self.advance_character().unwrap_or(' ') == '='{
             return Ok(Token::Operator(BinOp::GreaterEqualThan));
         }
 
@@ -122,7 +108,7 @@ impl Scanner{
     }
 
     fn scan_less_than(&mut self) -> Result<Token, LuaError>{
-        if self.advance_character().unwrap_or(&' ') == &'='{
+        if self.advance_character().unwrap_or(' ') == '='{
             return Ok(Token::Operator(BinOp::LessEqualThan));
         }
 
@@ -137,7 +123,7 @@ impl Scanner{
         let c = self.advance_character();
 
         if let Some(c) = c{
-            if c != &'.'{
+            if c != '.'{
                 return error(format!("Expected ellipse, found: {}", c), line);
             }
         }else{
@@ -157,11 +143,11 @@ impl Scanner{
                 return Ok(Token::EOF);
             }
 
-            if character == Some(&'"'){
+            if character == Some('"'){
                 break;
             }
 
-            char_vec.push(*character.unwrap());
+            char_vec.push(character.unwrap());
         }
 
         Ok(Token::StringLiteral(char_vec.iter().collect()))
@@ -173,15 +159,15 @@ impl Scanner{
         self.curr -= 1;
 
         loop{
-            if !self.peek().unwrap_or(&' ').is_numeric() {
-                if self.peek().unwrap_or(&' ') != &'.' || had_decimal{
+            if !self.peek().unwrap_or(' ').is_numeric() {
+                if self.peek().unwrap_or(' ') != '.' || had_decimal{
                     break;
                 }
 
                 had_decimal = true;
             }
 
-            char_vec.push(*self.advance_character().unwrap());
+            char_vec.push(self.advance_character().unwrap());
         }
 
         let string: String = char_vec.iter().collect();
@@ -193,9 +179,9 @@ impl Scanner{
     }
 
     fn scan_identifier(&mut self) -> Result<Token, LuaError>{
-        let mut char_vec: Vec<char> = vec![*self.char_at(self.curr - 1).unwrap()];
-        let stop_chars = vec![Some(&' '), Some(&'\n'), Some(&'\t'), Some(&'('), 
-            Some(&')'), Some(&','), Some(&'\r'), Some(&';')];
+        let mut char_vec: Vec<char> = vec![self.char_at(self.curr - 1).unwrap()];
+        let stop_chars = vec![Some(' '), Some('\n'), Some('\t'), Some('('), 
+            Some(')'), Some(','), Some('\r'), Some(';')];
 
         loop{
             if stop_chars.contains(&self.peek()){
@@ -205,7 +191,7 @@ impl Scanner{
             let character_option = self.advance_character();
 
             if let Some(c) = character_option{
-                char_vec.push(*c);   
+                char_vec.push(c);   
             }else{
                 return Ok(Token::EOF);
             }
@@ -220,19 +206,23 @@ impl Scanner{
         Ok(Token::Identifier(string))
     }
 
-    fn char_at(&self, i: usize) -> Option<&char>{
-        self.src.get(i)
+    fn char_at(&self, i: usize) -> Option<char>{
+        if let Some(c) = self.src.get(i){
+            Some(*c)
+        }else{
+            None
+        }
     }
 
-    fn peek(&self) -> Option<&char>{
+    fn peek(&self) -> Option<char>{
         self.char_at(self.curr)
     }
 
-    fn advance_character(&mut self) -> Option<&char>{
-        let c = self.src.get(self.curr);
+    fn advance_character(&mut self) -> Option<char>{
+        let c = self.char_at(self.curr);
         self.curr += 1;
 
-        if c == Some(&'\n'){
+        if c == Some('\n'){
             self.line_num += 1;
         }
 
