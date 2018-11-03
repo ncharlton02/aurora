@@ -76,14 +76,53 @@ impl Scanner{
 
     fn check_comment(&mut self) -> Result<Token, LuaError>{
         if self.peek() == Some('-'){
-            //Scan comment
-            return self.scan_until_comment_end();
+            self.advance_character();
+            if self.peek() == Some('['){
+                self.advance_character();
+                return self.scan_multi_comment();
+            }
+
+            return self.scan_single_comment();
         }
 
         Ok(Token::Operator(BinOp::Minus))
     }
 
-    fn scan_until_comment_end(&mut self) -> Result<Token, LuaError>{
+    fn scan_multi_comment(&mut self) -> Result<Token, LuaError>{
+        if self.peek() != Some('['){
+            return self.scan_single_comment();
+        }
+
+        let mut stage = 0;
+
+        loop{
+            let c = self.advance_character();
+
+            if let Some(c) = c{
+                if c == '-'{
+                    if stage == 0{
+                        stage = 1;
+                    }else if stage == 1{
+                        stage = 2;
+                    }else{
+                        stage = 0;
+                    }
+                }
+
+                if c == ']'{
+                    if stage == 2{
+                        stage = 3;
+                    }else if stage == 3{
+                        return self.scan_token();
+                    }
+                }
+            }else{
+                return Ok(Token::EOF);
+            }
+        }
+    }
+
+    fn scan_single_comment(&mut self) -> Result<Token, LuaError>{
         loop{
             let c = self.advance_character();
 

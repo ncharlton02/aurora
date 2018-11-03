@@ -1,0 +1,8 @@
+src="assets/comments.lua"
+tokens=11
+statements=3
+
+[test_variables]
+names=["x"]
+
+values=["5"]
