@@ -2,10 +2,10 @@
 use super::{Token, BinOp, Keyword};
 use super::super::error::{LuaError};
 
-struct Scanner{
+pub struct Scanner{
     src: Vec<char>,
     curr: usize,
-    line_num: usize,
+    pub line_num: usize,
 }
 
 impl Scanner{
@@ -14,7 +14,7 @@ impl Scanner{
         Scanner{src : src.chars().collect(), curr : 0, line_num: 1}
     }
 
-    pub fn scan(mut self) -> Result<Vec<Token>, Vec<LuaError>>{
+    pub fn scan(&mut self) -> Result<Vec<Token>, Vec<LuaError>>{
         let mut tokens = Vec::new();
         let mut errors = Vec::new();
 
@@ -275,7 +275,7 @@ fn error(message: String, line: usize) -> Result<Token, LuaError>{
     }
 
 pub fn scan(src: String) -> Result<Vec<Token>, Vec<LuaError>>{
-    let scanner = Scanner::new(src);
+    let mut scanner = Scanner::new(src);
 
     scanner.scan()
 }

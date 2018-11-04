@@ -9,15 +9,21 @@ use std::fs;
 use std::path::PathBuf;
 
 use aurora::data::LuaData;
+use aurora::interpreter::Interpreter;
+use aurora::Token;
+use aurora::Stmt;
+use aurora::parser::Parser;
+use aurora::parser::scanner::Scanner;
 
 const ROOT_PATH : &'static str = "tests/toml";
 
 #[derive(Debug, Deserialize)]
 struct TestInfo{
     src : String,
-    statements: Option<usize>,
-    tokens: Option<usize>,
-    test_variables: Option<TestVars>
+    statements: usize,
+    tokens: usize,
+    line_count: usize,
+    test_variables: TestVars
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,10 +46,42 @@ fn run_toml_test(path: PathBuf){
     println!("Running toml test: {:#?}", test_info);
 
     let lua_src = load_file(test_info.src);
-    let tokens = match aurora::parser::scanner::scan(lua_src){
+    let (scanner, tokens) = create_scanner(lua_src);
+    println!("Tokens: \n{:#?}", tokens);
+
+    assert_eq!(tokens.len(), test_info.tokens, "Token count does not match");
+    assert_eq!(scanner.line_num, test_info.line_count, "Scanner line count does not match");
+    
+
+    let (parser, stmts) = create_parser(tokens);
+    println!("Stmts: \n{:#?}", stmts);
+
+    let stmt_count = aurora::count_stmts_recur(&stmts);
+    assert_eq!(test_info.statements, stmt_count as usize, "Stmt count does not match");
+    assert_eq!(parser.line, test_info.line_count, "Parser line count does not match");
+    
+
+    let interpreter = create_interpreter(stmts);
+    check_variables(test_info.test_variables, interpreter);
+}
+
+fn check_variables(vars: TestVars, interpreter: Interpreter){
+    assert_eq!(vars.names.len(), vars.values.len());
+
+    for i in 0..vars.names.len(){
+        let name = vars.names.get(i).unwrap();
+        let value = vars.values.get(i).unwrap();
+        let actual = interpreter.get_variable(name.to_string()).unwrap_or(&LuaData::Nil);
+
+        assert_eq!(format!("{}", actual), format!("{}", value));
+    }
+}
+
+fn create_scanner(src: String) -> (Scanner, Vec<Token>){
+    let mut scanner = Scanner::new(src);    
+    let tokens = match scanner.scan(){
         Ok(x) => x,
         Err(errors) => {
-            println!("FAILED TO SCAN TEST: {:?}", path);
             for e in errors{
                 println!("{}", e);
             }
@@ -52,47 +90,39 @@ fn run_toml_test(path: PathBuf){
         },
     };
 
-    if let Some(num) = test_info.tokens{
-        assert_eq!(tokens.len(), num);
-    }
+    return (scanner, tokens);
+}
 
-    let mut stmts = match aurora::parser::parse(tokens){
+fn create_parser(tokens: Vec<Token>) -> (Parser, Vec<Stmt>){
+    let mut parser = Parser::new(tokens);
+
+    let stmts = match parser.parse(){
         Ok(x) => x,
         Err(e) => {
             panic!("{}", e);
         }
     };
 
-    if let Some(num) = test_info.statements{
-        let stmt_count = aurora::count_stmts_recur(&stmts);
-        assert_eq!(num, stmt_count as usize)
-    }
+    return (parser, stmts);
+}
+
+fn create_interpreter(mut stmts: Vec<Stmt>) -> Interpreter{
+    let mut interpreter = Interpreter::new();
 
     println!("--------- Running -------");
-    let interpreter = match aurora::interpreter::run(&mut stmts){
+    for mut stmt in stmts.iter_mut(){
+        match interpreter.run_stmt(stmt){
             Ok(x) => x,
             Err(e) => {
-                println!("FAILED TO RUN TEST: {:?}", path);
                 println!("{}", e);
                 panic!();
             }
         };
+    }
     println!("--------- Finished -------");
 
-    if let Some(vars) = test_info.test_variables{
-        assert_eq!(vars.names.len(), vars.values.len());
-
-        for i in 0..vars.names.len(){
-            let name = vars.names.get(i).unwrap();
-            let value = vars.values.get(i).unwrap();
-            let actual = interpreter.get_variable(name.to_string()).unwrap_or(&LuaData::Nil);
-
-            assert_eq!(format!("{}", actual), format!("{}", value));
-        }
-    }
+    return interpreter;
 }
-
-
 
 fn load_toml(path: &PathBuf) -> TestInfo{
     let toml_str = load_file(path.to_str().unwrap().to_string());

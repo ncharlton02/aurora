@@ -1,6 +1,7 @@
 src="assets/comments.lua"
 tokens=11
 statements=3
+line_count=4
 
 [test_variables]
 names=["x"]

@@ -6,14 +6,14 @@ use std::collections::VecDeque;
 use super::{Token, BinOp, Stmt, StmtType, Expr, Keyword};
 use super::error::LuaError;
 
-struct Parser{
+pub struct Parser{
     tokens: VecDeque<Token>,
-    line: usize
+    pub line: usize
 }
 
 impl Parser{
 
-    fn new(tokens: Vec<Token>) -> Parser{
+    pub fn new(tokens: Vec<Token>) -> Parser{
         let mut tokens_deque: VecDeque<Token> = VecDeque::new();
 
         for token in tokens{
@@ -23,7 +23,7 @@ impl Parser{
         Parser {tokens: tokens_deque, line: 1}
     }
     
-    fn parse(mut self) -> Result<Vec<Stmt>, LuaError>{
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, LuaError>{
         let mut stmts: Vec<Stmt> = Vec::new();
 
         loop{
@@ -60,11 +60,7 @@ impl Parser{
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
                 error(format!("Stmt's cannot start with {:?}", token), self.line)
             },
-            Token::Newline => {
-                self.line += 1;
-                self.scan_stmt()
-            },
-            Token::Semicolon => self.scan_stmt(),
+            Token::Semicolon | Token::Newline => self.scan_stmt(),
             Token::EOF => return Ok(Stmt {stmt_type : StmtType::EOF}),
         }
     }
@@ -244,7 +240,8 @@ impl Parser{
     }
 
     fn scan_assignment(&mut self, name: Token, is_local: bool) -> Result<Stmt, LuaError>{
-        let expr = expr::parse(self.advance_to_mult(vec![Token::Newline, Token::Semicolon]), self.line)?;
+        let tokens = self.advance_to_mult(vec![Token::Newline, Token::Semicolon]);
+        let expr = expr::parse(tokens, self.line)?;
         let stmt_type = StmtType::Assignment(name, expr, is_local);
 
         Ok(Stmt {stmt_type})
@@ -298,7 +295,13 @@ impl Parser{
     }
 
     fn next_token(&mut self) -> Option<Token>{
-        self.tokens.pop_front()
+        let token = self.tokens.pop_front();
+
+        if token ==Some(Token::Newline){
+            self.line += 1;
+        }
+
+        token
     }
 }
 
@@ -307,7 +310,7 @@ fn error(message: String, line: usize) -> Result<Stmt, LuaError>{
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Stmt>, LuaError>{
-    let parser = Parser::new(tokens);
+    let mut parser = Parser::new(tokens);
 
     parser.parse()
 }

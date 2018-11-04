@@ -1,6 +1,7 @@
 src="assets/math.lua"
 tokens=62
 statements=11
+line_count=12
 
 [test_variables]
 names = ["add", "sub", "mult", "div"]
