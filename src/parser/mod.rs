@@ -57,7 +57,8 @@ impl Parser{
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
             Token::Keyword(Keyword::While) => self.handle_while_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
-            Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) =>{ 
+            Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) |
+            Token::LeftBrace | Token::RightBrace =>{ 
                 error(format!("Stmt's cannot start with {:?}", token), self.line)
             },
             Token::Semicolon | Token::Newline => self.scan_stmt(),

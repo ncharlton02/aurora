@@ -71,7 +71,7 @@ fn check_variables(vars: TestVars, interpreter: Interpreter){
     for i in 0..vars.names.len(){
         let name = vars.names.get(i).unwrap();
         let value = vars.values.get(i).unwrap();
-        let actual = interpreter.get_variable(name.to_string()).unwrap_or(&LuaData::Nil);
+        let actual = interpreter.get_variable(name.to_string()).unwrap().unwrap_or(&LuaData::Nil);
 
         assert_eq!(format!("{}", actual), format!("{}", value));
     }

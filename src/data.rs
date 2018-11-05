@@ -1,11 +1,42 @@
 
 use std::fmt;
+use std::collections::{HashMap};
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TableData{
+    vars: HashMap<String, LuaData>,
+}
+
+impl TableData{
+
+    pub fn new() -> TableData{
+        let mut data = TableData{vars : HashMap::new()};
+
+        data.assign_variable("foo".to_string(), LuaData::Str("bar".to_string()));
+
+        data
+    }
+
+    pub fn assign_variable(&mut self, name: String, data: LuaData){
+        self.vars.insert(name, data);
+    }
+
+    pub fn get_variable(&self, name: String) -> Option<&LuaData>{
+        self.vars.get(&name)
+    }
+
+    pub fn get_variable_mut(&mut self, name: String) -> Option<&mut LuaData>{
+        self.vars.get_mut(&name)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LuaData{
     Str(String),
     Number(f64),
     Bool(bool),
+    Func(i64),
+    Table(TableData),
     Nil,
 }
 
@@ -16,6 +47,8 @@ impl LuaData{
             LuaData::Number(x) => *x,
             LuaData::Bool(false) => 0.0,
             LuaData::Bool(true) => 1.0,
+            LuaData::Table(data) => data.vars.len() as f64,
+            LuaData::Func(n) => *n as f64,
             LuaData::Str(_) => unimplemented!("String to number conversion isn't implemented"),
             LuaData::Nil => 0.0,
         }
@@ -26,6 +59,8 @@ impl LuaData{
             LuaData::Str(x) => (*x).to_string(),
             LuaData::Bool(x) => format!("{}", x),
             LuaData::Number(x) => format!("{}", x),
+            LuaData::Table(data) => format!("Table{:?}", data.vars),
+            LuaData::Func(id) => format!("Func[{}]", id),
             LuaData::Nil => "nil".to_string(),
         }
     }
@@ -42,12 +77,7 @@ impl LuaData{
 
 impl fmt::Display for LuaData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self{
-            LuaData::Str(string) => write!(f, "{}", string),
-            LuaData::Number(number) => write!(f, "{}", number),
-            LuaData::Bool(b) => write!(f, "{}", b),
-            LuaData::Nil => write!(f, "nil"),
-        }
+        write!(f, "{}", self.to_string())
     }
 }
 

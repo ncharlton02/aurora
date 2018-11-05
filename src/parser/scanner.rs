@@ -62,6 +62,8 @@ impl Scanner{
                 '.' => self.check_elipse(),  
                 '<' => self.scan_less_than(),
                 '>' => self.scan_greater_than(),
+                '{' => Ok(Token::LeftBrace),
+                '}' => Ok(Token::RightBrace),
                 ' ' | '\t' | '\r' => self.scan_token(),
                 x if x.is_alphabetic() => self.scan_identifier(),
                 n if n.is_numeric() => self.scan_number(),

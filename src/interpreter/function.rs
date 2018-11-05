@@ -41,7 +41,7 @@ impl LuaFunc{
                 x => return Err(error(format!("Expected identifier but found {:?}", x))),    
             }.to_string();
 
-            interpreter.assign_variable(name, data.get(x).unwrap().clone(), true)
+            interpreter.assign_variable(name, data.get(x).unwrap().clone(), true)?
         }
 
         Ok(())
@@ -49,7 +49,17 @@ impl LuaFunc{
 }
 
 #[derive(Clone)]
-pub enum Function{
+pub enum FunctionDef{
     Lua(LuaFunc),
     Rust(RustFunc)
+}
+
+#[derive(Clone)]
+pub struct Function{
+    pub def: FunctionDef,
+    pub id: i64
+}
+
+pub fn create_function(id: i64, def: FunctionDef) -> Function{
+    Function{def, id}
 }

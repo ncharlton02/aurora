@@ -73,6 +73,8 @@ pub enum Token{
     Semicolon,
     Newline,
     Comma,
+    LeftBrace,
+    RightBrace,
     EOF 
 }
 
@@ -175,7 +177,7 @@ impl Aurora{
         Aurora{interpreter: Interpreter::new(), config: config}
     }
 
-    pub fn register_function(&mut self, name: String, function: interpreter::function::Function){
+    pub fn register_function(&mut self, name: String, function: interpreter::function::FunctionDef){
         self.interpreter.register_func(name, function);
     }
 

@@ -3,12 +3,14 @@ use std::collections::{HashMap};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::{data::*, error::LuaError};
 
-use self::function::{Function, LuaFunc};
+use self::function::{Function, FunctionDef, LuaFunc};
 
 pub mod function;
 
 pub struct Interpreter{
-    funcs: HashMap<String, Function>,
+    funcs: HashMap<i64, Function>,
+    func_names: HashMap<String, i64>,
+    func_count: i64,
     globals: HashMap<String, LuaData>,
     stack: Vec<HashMap<String, LuaData>>,
     return_val: Option<LuaData>
@@ -19,12 +21,14 @@ impl Interpreter{
     pub fn new() -> Interpreter{
         let mut interpreter = Interpreter {
             funcs: HashMap::new(), 
+            func_names: HashMap::new(), 
+            func_count : 0,
             globals: HashMap::new(),
             stack: vec![HashMap::new()],
             return_val: None,
         };
 
-        interpreter.register_func("print".to_string(), Function::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+        interpreter.register_func("print".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
             for arg in args{
                 print!("{}\t", arg);
             }
@@ -33,7 +37,7 @@ impl Interpreter{
             Ok(None)
         }));
 
-        interpreter.register_func("assert".to_string(), Function::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+        interpreter.register_func("assert".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
             if args.len() != 2{
                 return Err(error(format!("Expected 2 arguments, found: {:?}", args)));
             }
@@ -51,30 +55,99 @@ impl Interpreter{
         interpreter
     }
 
-    pub fn register_func(&mut self, name: String, func: Function){
-        self.funcs.insert(name, func);
+    pub fn register_func(&mut self, name: String, def: FunctionDef) -> i64{
+        let id = self.func_count;
+        self.func_count += 1;
+        self.func_names.insert(name, id);
+        self.funcs.insert(id, function::create_function(id, def));
+
+        id
     }
 
-    pub fn assign_variable(&mut self, name: String, data: LuaData, is_local: bool){
+    pub fn assign_variable(&mut self, name: String, data: LuaData, is_local: bool) -> Result<(), LuaError>{
+        if name.contains('.'){
+            let (path, variable_name) = split_name_path(name);
+
+            let table = self.get_variable_mut(&path)?;
+
+            if let Some(table) = table{
+                match table{
+                    LuaData::Table(table_data) => table_data.assign_variable(variable_name, data),
+                    x => return Err(error(format!("UH oh: {}", x))),
+                }
+            }else{
+                return Err(error(format!("Failed to find table with name: {}", path)));
+            }
+
+            return Ok(());
+        }
+
         if is_local || self.stack.last().unwrap().contains_key(&name){
             let index = self.stack.len() - 1;
             let frame = &mut self.stack[index];
 
             frame.insert(name, data);
-            return;
+            return Ok(());
         }
 
         self.globals.insert(name, data);
+        Ok(())
     }
 
-    pub fn get_variable(&self, name: String) -> Option<&LuaData>{
-        if let Some(var) = self.stack.last().unwrap().get(&name){
-            return Some(var);
+    pub fn get_variable(&self, name: String) -> Result<Option<&LuaData>, LuaError>{
+        if name.contains('.'){
+            let (table, variable) = split_name_path(name);
+
+            return self.get_table_variable(table, variable);
         }
 
-        self.globals.get(&name)
+        if let Some(var) = self.stack.last().unwrap().get(&name){
+            return Ok(Some(var));
+        }
+
+        Ok(self.globals.get(&name))
     }
 
+     pub fn get_table_variable(&self, table: String, name: String) -> Result<Option<&LuaData>, LuaError>{
+        let table = self.get_variable(table)?;
+
+        if let Some(table) = table{
+            match table{
+                LuaData::Table(data) => Ok(data.get_variable(name)),
+                x => Err(error(format!("Expected table found: {}", x)))
+            }
+        }else{
+            Ok(None)
+        }
+    }
+
+    pub fn get_variable_mut(&mut self, name: &str) -> Result<Option<&mut LuaData>, LuaError>{
+         if name.contains('.'){
+            let (path, variable_name) = split_name_path(name.to_string());
+
+            return self.get_table_variable_mut(path, variable_name);
+        }
+
+        if let Some(var) = self.stack.last_mut().unwrap().get_mut(name){
+            return Ok(Some(var));
+        }
+
+        Ok(self.globals.get_mut(name))
+    }
+
+    pub fn get_table_variable_mut(&mut self, table: String, name: String) -> Result<Option<&mut LuaData>, LuaError>{
+        let table = self.get_variable_mut(&table)?;
+
+        if let Some(table) = table{
+            match table{
+                LuaData::Table(data) => Ok(data.get_variable_mut(name)),
+                x => Err(error(format!("Expected table found: {}", x)))
+            }
+        }else{
+            Ok(None)
+        }
+    }
+    
     pub fn run_stmt(&mut self, stmt: &mut Stmt) -> Result<(), LuaError>{
         if let Some(_) = self.return_val{
             return Ok(());
@@ -110,7 +183,18 @@ impl Interpreter{
 
         let func = LuaFunc::new(args.to_vec(), stmts.to_vec());
 
-        self.register_func(name.to_string(), Function::Lua(func));
+        let id = self.register_func(name.to_string(), FunctionDef::Lua(func));
+
+        if name.contains('.'){
+            let (path, variable_name) = split_name_path(name.to_string());
+
+            let table = self.get_variable_mut(&path)?;
+
+            match table{
+                Some(LuaData::Table(data)) => data.assign_variable(variable_name, LuaData::Func(id)),
+                x => return Err(error(format!("Expected table, found {:?}", x))),
+            }
+        }
 
         Ok(())
     }
@@ -153,8 +237,7 @@ impl Interpreter{
 
         let value = self.evaluate_expr(expr)?;
 
-        self.assign_variable(name.to_string(), value, is_local);
-        Ok(())
+        self.assign_variable(name.to_string(), value, is_local)
     }
 
     fn evaluate_expr(&mut self, expr: &Expr) -> Result<LuaData, LuaError>{
@@ -175,6 +258,19 @@ impl Interpreter{
             Token::StringLiteral(x) => LuaData::Str(x.clone()),
             Token::Keyword(Keyword::True) => LuaData::Bool(true),
             Token::Keyword(Keyword::False) => LuaData::Bool(false),
+            Token::LeftBrace =>{
+                if tokens.len() == 2{
+                    let next = tokens.get(1);
+
+                    if next == Some(&Token::RightBrace){
+                        LuaData::Table(TableData::new())
+                    }else{
+                        return Err(error(format!("Expected right curly brace but found: {:?}", next)))
+                    }
+                }else{
+                    return Err(error(format!("Failed to parse value for left curly brace!")))
+                }
+            },
             Token::Identifier(x) => {
                 match tokens.get(1){
                     Some(Token::LeftParenthesis) => {
@@ -189,7 +285,7 @@ impl Interpreter{
                         }
                     },
                     None => {
-                        if let Some(val) = self.get_variable(x.to_string()){
+                        if let Some(val) = self.get_variable(x.to_string())?{
                             val.clone()
                         }else{
                             LuaData::Nil
@@ -251,24 +347,39 @@ impl Interpreter{
             Token::Identifier(string) => string,
             _ => return Err(error(format!("Illegal Token: expected identifier but found {:?}", name))),
         };
-
+        
+        let func_id = self.get_function_id_from_identifier(name)?;
         let arg_data = self.evaluate_args(args)?;
-        let func = match self.funcs.get(name){
+        let func = match self.funcs.get(&func_id){
             Some(x) => x,
             None => return Err(error(format!("Unable to find function with name: {}", name))),   
         }.clone();
 
         self.stack.push(HashMap::new());
       
-        let result = match func{
-            Function::Rust(func) => func(arg_data, self)?,
-            Function::Lua(mut func) => func.execute(arg_data, self)?,
+        let result = match func.def{
+            FunctionDef::Rust(func) => func(arg_data, self)?,
+            FunctionDef::Lua(mut func) => func.execute(arg_data, self)?,
         }.unwrap_or(LuaData::Nil);
 
         self.stack.pop();
         self.return_val = None;
 
         Ok(result)
+    }
+
+    fn get_function_id_from_identifier(&self, id: &String) -> Result<i64, LuaError>{
+        if id.contains('.'){
+            let(path, variable) = split_name_path(id.to_string());
+
+            if let Some(LuaData::Func(id)) = self.get_table_variable(path, variable)?{
+                Ok(*id)
+            }else{
+                Ok(-1)
+            }
+        }else{
+            Ok(*self.func_names.get(id).unwrap_or(&-1))
+        }
     }
 
     fn evaluate_args(&mut self, exprs: Vec<Expr>) -> Result<Vec<LuaData>, LuaError>{
@@ -281,6 +392,35 @@ impl Interpreter{
         Ok(data)
     }
 }
+
+/// Splits a variable name multiple parts
+/// Ex: 'foo.bar.baz' returns ('foo.bar', 'baz')
+/// 
+/// ```
+/// use aurora::interpreter;
+/// 
+/// let input  = "foo.bar.baz".to_string();
+/// 
+/// let (path, name) = interpreter::split_name_path(input);
+/// 
+/// assert_eq!("foo.bar", path);
+/// assert_eq!("baz", name);
+/// ```
+pub fn split_name_path(input: String) -> (String, String){
+    let mut split_string: Vec<String> = input.split('.').map(|s| s.to_string()).collect();
+    let variable = split_string.pop().unwrap();
+    let mut path = String::new();
+
+    for s in split_string{
+        path.push_str(&s);
+        path.push_str(".");
+    }
+    let len = path.len();
+    path.truncate(len - 1);
+
+    (path, variable)
+}
+
 
 fn error(message: String) -> LuaError{
     LuaError::create_runtime(&message)
