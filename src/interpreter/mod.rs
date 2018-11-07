@@ -4,13 +4,17 @@ use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::{data::*, error::LuaError};
 
 use self::function::{Function, FunctionDef, LuaFunc};
+use self::table::Table;
 
 pub mod function;
+pub mod table;
 
 pub struct Interpreter{
     funcs: HashMap<i64, Function>,
     func_names: HashMap<String, i64>,
     func_count: i64,
+    tables: HashMap<i64, Table>,
+    table_count: i64,
     globals: HashMap<String, LuaData>,
     stack: Vec<HashMap<String, LuaData>>,
     return_val: Option<LuaData>
@@ -23,6 +27,8 @@ impl Interpreter{
             funcs: HashMap::new(), 
             func_names: HashMap::new(), 
             func_count : 0,
+            tables: HashMap::new(),
+            table_count: 0,
             globals: HashMap::new(),
             stack: vec![HashMap::new()],
             return_val: None,
@@ -64,20 +70,33 @@ impl Interpreter{
         id
     }
 
+    fn create_table(&mut self) -> i64{
+        let id = self.table_count;
+        self.table_count += 1;
+        self.tables.insert(id, Table::new());
+
+        id
+    }
+
     pub fn assign_variable(&mut self, name: String, data: LuaData, is_local: bool) -> Result<(), LuaError>{
         if name.contains('.'){
             let (path, variable_name) = split_name_path(name);
 
-            let table = self.get_variable_mut(&path)?;
+            let table = self.get_variable(path)?.unwrap_or(&LuaData::Nil).clone();
 
-            if let Some(table) = table{
-                match table{
-                    LuaData::Table(table_data) => table_data.assign_variable(variable_name, data),
-                    x => return Err(error(format!("UH oh: {}", x))),
+            match table{
+                LuaData::Table(id) => {
+                let table = self.get_table_mut(id);
+
+                    if let Some(table) = table{
+                        table.assign_variable(variable_name, data);
+                    }else{
+                        panic!("Error: found invalid table id: {}", id);
+                    }
                 }
-            }else{
-                return Err(error(format!("Failed to find table with name: {}", path)));
+                x => return Err(error(format!("Expected table, found: {}", x))),
             }
+            
 
             return Ok(());
         }
@@ -113,12 +132,28 @@ impl Interpreter{
 
         if let Some(table) = table{
             match table{
-                LuaData::Table(data) => Ok(data.get_variable(name)),
+                LuaData::Table(id) => {
+                    let table = self.get_table(*id);
+
+                    if let Some(table) = table{
+                        Ok(table.get_variable(name))
+                    }else{
+                        panic!("Error: found invalid table id: {}", id);
+                    }
+                }
                 x => Err(error(format!("Expected table found: {}", x)))
             }
         }else{
             Ok(None)
         }
+    }
+
+    pub fn get_table(&self, id: i64) -> Option<&Table>{
+        self.tables.get(&id)
+    }
+
+     pub fn get_table_mut(&mut self, id: i64) -> Option<&mut Table>{
+        self.tables.get_mut(&id)
     }
 
     pub fn get_variable_mut(&mut self, name: &str) -> Result<Option<&mut LuaData>, LuaError>{
@@ -136,15 +171,19 @@ impl Interpreter{
     }
 
     pub fn get_table_variable_mut(&mut self, table: String, name: String) -> Result<Option<&mut LuaData>, LuaError>{
-        let table = self.get_variable_mut(&table)?;
+        let table = self.get_variable(table)?.unwrap_or(&LuaData::Nil).clone();
 
-        if let Some(table) = table{
-            match table{
-                LuaData::Table(data) => Ok(data.get_variable_mut(name)),
-                x => Err(error(format!("Expected table found: {}", x)))
-            }
-        }else{
-            Ok(None)
+        match table{
+            LuaData::Table(id) => {
+                let table = self.get_table_mut(id);
+
+                if let Some(table) = table{
+                    Ok(table.get_variable_mut(name))
+                }else{
+                    panic!("Error: found invalid table id: {}", id);
+                }
+            },
+            x => Err(error(format!("Expected table found: {}", x)))
         }
     }
     
@@ -188,10 +227,19 @@ impl Interpreter{
         if name.contains('.'){
             let (path, variable_name) = split_name_path(name.to_string());
 
-            let table = self.get_variable_mut(&path)?;
+            let table = self.get_variable(path)?.unwrap_or(&LuaData::Nil).clone();
 
+            //TODO do we need this?
             match table{
-                Some(LuaData::Table(data)) => data.assign_variable(variable_name, LuaData::Func(id)),
+                LuaData::Table(table_id) => {
+                    let table = self.get_table_mut(table_id);
+
+                    if let Some(table) = table{
+                        table.assign_variable(variable_name, LuaData::Func(id));
+                    }else{
+                        panic!("Error: found invalid table id: {}", id);
+                    }
+                },
                 x => return Err(error(format!("Expected table, found {:?}", x))),
             }
         }
@@ -263,7 +311,7 @@ impl Interpreter{
                     let next = tokens.get(1);
 
                     if next == Some(&Token::RightBrace){
-                        LuaData::Table(TableData::new())
+                        LuaData::Table(self.create_table())
                     }else{
                         return Err(error(format!("Expected right curly brace but found: {:?}", next)))
                     }
