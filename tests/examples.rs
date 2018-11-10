@@ -12,6 +12,11 @@ fn run_lua_examples(){
 
     for path in paths {
         let path = path.unwrap().path();
+
+        if path.is_dir(){
+            continue;
+        }
+
         let mut aurora = Aurora::new(Config::new(LogLevel::Verbose));
 
         println!("Testing file: {}", path.display());

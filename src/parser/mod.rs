@@ -58,7 +58,7 @@ impl Parser{
             Token::Keyword(Keyword::While) => self.handle_while_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) |
-            Token::LeftBrace | Token::RightBrace =>{ 
+            Token::LeftBrace | Token::RightBrace | Token::Equal =>{ 
                 error(format!("Stmt's cannot start with {:?}", token), self.line)
             },
             Token::Semicolon | Token::Newline => self.scan_stmt(),
@@ -186,7 +186,7 @@ impl Parser{
 
                     Ok(Stmt {stmt_type})
                 },
-                Token::Operator(BinOp::Equal) =>{
+                Token::Equal =>{
                   Ok(self.scan_assignment(token, false)?)
                 },
                 _ => error(format!("Unknown token following identifier: {:?}", token), self.line),
@@ -233,7 +233,7 @@ impl Parser{
             None => return error(format!("Expected token '=' but found None!"), self.line)
         };
 
-        if equal_token != Token::Operator(BinOp::Equal){
+        if equal_token != Token::Equal{
             return error(format!("Expected token '=' but found, {:?}", equal_token), self.line);
         }
 

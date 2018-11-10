@@ -12,7 +12,7 @@ pub enum ErrorType{
 pub struct LuaError{
     error_type: ErrorType,
     location: Option<String>,
-    message: String
+    pub message: String
 }
 
 impl fmt::Display for LuaError {

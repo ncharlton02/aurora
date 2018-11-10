@@ -2,7 +2,7 @@
 use super::{Interpreter, error};
 use super::super::{Token, Stmt, data::LuaData, error::LuaError};
 
-type RustFunc = fn(Vec<LuaData>, &Interpreter) -> Result<Option<LuaData>, LuaError>;
+type RustFunc = fn(Vec<LuaData>, &mut Interpreter) -> Result<Option<LuaData>, LuaError>;
 
 #[derive(Clone)]
 pub struct LuaFunc{

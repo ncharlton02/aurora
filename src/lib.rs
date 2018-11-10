@@ -16,7 +16,7 @@ pub enum BinOp{
     LessEqualThan,
     GreaterThan,
     GreaterEqualThan,
-    Equal,
+    EqualEqual,
     Plus,
     Minus, 
     Multiply,
@@ -75,6 +75,7 @@ pub enum Token{
     Comma,
     LeftBrace,
     RightBrace,
+    Equal,
     EOF 
 }
 

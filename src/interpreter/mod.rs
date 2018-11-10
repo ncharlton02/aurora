@@ -1,4 +1,6 @@
 
+use std::io::prelude::*;
+use std::fs::File;
 use std::collections::{HashMap};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::{data::*, error::LuaError};
@@ -43,19 +45,33 @@ impl Interpreter{
             Ok(None)
         }));
 
-        interpreter.register_func("assert".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
-            if args.len() != 2{
-                return Err(error(format!("Expected 2 arguments, found: {:?}", args)));
-            }
-            
-            let left = &args[0];
-            let right = &args[1];
-
-            if left != right{
-                return Err(error(format!("Assert failed! Left: {:?}, Right: {:?}", left, right)));
+        interpreter.register_func("fail".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+            if args.len() != 1{
+                return Err(error(format!("Expected one argument, found {}", args.len())));
             }
 
-            Ok(None)
+            let message = match args.get(0).unwrap(){
+                LuaData::Str(x) => x,
+                x => return Err(error(format!("Expected string, found {}", x)))
+            };
+
+            Err(error(format!("{}", message)))
+        }));
+
+        interpreter.register_func("require".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
+            if args.len() != 1{
+                return Err(error(format!("Expected one argument, found {}", args.len())));
+            }
+
+            let path = match args.get(0).unwrap(){
+                LuaData::Str(x) => x,
+                x => return Err(error(format!("Expected string, found {}", x)))
+            };
+
+            let src = load_file(path)?;
+            let module = load_module(src, interpreter)?;
+    
+            Ok(Some(module))
         }));
 
         interpreter
@@ -367,6 +383,7 @@ impl Interpreter{
             BinOp::LessEqualThan => LuaData::Bool(left_num <= right_num),
             BinOp::GreaterThan => LuaData::Bool(left_num > right_num),
             BinOp::GreaterEqualThan => LuaData::Bool(left_num >= right_num),
+            BinOp::EqualEqual => LuaData::Bool(left_num == right_num),
             _ => return Err(error(format!("Unknown num operator: {:?}!", operator))),
         })
     }
@@ -439,6 +456,26 @@ impl Interpreter{
 
         Ok(data)
     }
+
+    fn load_module(&mut self, mut stmts: Vec<Stmt>) -> Result<LuaData, LuaError>{
+        self.stack.push(HashMap::new());
+        //run code
+        //get return value
+        for stmt in stmts.iter_mut(){
+            self.run_stmt(stmt)?;
+
+            match self.return_val{
+                Some(LuaData::Table(_)) => break,
+                _ => (),
+            }
+        }
+
+        let return_value = self.return_val.clone().unwrap_or(LuaData::Nil);
+        self.return_val = None;
+        self.stack.pop();
+
+        Ok(return_value)
+    }
 }
 
 /// Splits a variable name multiple parts
@@ -472,6 +509,41 @@ pub fn split_name_path(input: String) -> (String, String){
 
 fn error(message: String) -> LuaError{
     LuaError::create_runtime(&message)
+}
+
+fn load_file(name: &str) -> Result<String, LuaError>{
+    let path = format!("assets/{}.lua", name);
+
+    let mut file = match File::open(&path){
+        Ok(x) => x,
+        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e)))
+    };
+    let mut contents = String::new();
+    match file.read_to_string(&mut contents){
+        Ok(_) => (),
+        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e)))
+    }
+    
+    Ok(contents)
+}
+
+fn load_module(src: String, interpreter: &mut Interpreter) -> Result<LuaData, LuaError>{
+    let tokens = match super::parser::scanner::scan(src){
+        Ok(x) => x,
+        Err(errors) => {
+            let mut message = String::new();
+
+            for error in errors{
+                message.push_str(&error.message);
+                message.push_str("\n")
+            }
+
+            return Err(error(message));
+        },
+    };
+    let stmts = super::parser::parse(tokens)?;
+
+    Ok(interpreter.load_module(stmts)?)
 }
 
 pub fn run(stmts: &mut Vec<Stmt>) -> Result<Interpreter, LuaError>{

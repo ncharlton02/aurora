@@ -36,13 +36,12 @@ isn't supported. See below for the currently supported and planned features.
 - Local variables
 - Basic error messages with line numbers
 - Tables
-  
+- Modules
 
 ### Planned features
 - Rust/Lua interops
 - For loops
 - A std library
-- Modules
 - Order of Operations
 - Library to run files 
 - Basic concurrency

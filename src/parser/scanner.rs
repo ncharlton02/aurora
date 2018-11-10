@@ -54,7 +54,7 @@ impl Scanner{
                 '"' => self.scan_string(),
                 '\n' => Ok(Token::Newline),
                 ';' => Ok(Token::Semicolon),
-                '=' => Ok(Token::Operator(BinOp::Equal)),
+                '=' => self.scan_equals(),
                 '+' => Ok(Token::Operator(BinOp::Plus)),
                 '-' => self.check_comment(),
                 '*' => Ok(Token::Operator(BinOp::Multiply)),
@@ -74,6 +74,17 @@ impl Scanner{
         }else{
             Ok(Token::EOF)
         }
+    }
+
+    fn scan_equals(&mut self) -> Result<Token, LuaError>{
+        let next_char = self.peek();
+
+        if next_char == Some('='){
+            self.advance_character();
+            return Ok(Token::Operator(BinOp::EqualEqual))
+        }
+
+        return Ok(Token::Equal);
     }
 
     fn check_comment(&mut self) -> Result<Token, LuaError>{

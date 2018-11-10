@@ -1,3 +1,4 @@
+require("lib/core")
 num = 5 + 6
 str = "This is a string"
 boolean = true
@@ -16,7 +17,7 @@ assert(x, 5)
 -- Tables are passed by reference
 x = {}
 y = x
-y.foo = "Bar"
-
-assert(x.foo, "Bar")
+y.foo = 5
+print("TEST")
+assert(x.foo, 5)
 

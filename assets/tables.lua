@@ -1,3 +1,5 @@
+require("lib/core")
+
 local numbers = {} -- Create a tables
 
 -- Tables can have variables
@@ -6,6 +8,7 @@ numbers.one_fifth = 1 / 5
 
 num = numbers
 
+assert(1/5, numbers.one_fifth)
 print("Pi is " .. num.pi)
 print("1/5 is " .. num.one_fifth)
 
