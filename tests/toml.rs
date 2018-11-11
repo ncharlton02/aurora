@@ -108,6 +108,7 @@ fn create_parser(tokens: Vec<Token>) -> (Parser, Vec<Stmt>){
 
 fn create_interpreter(mut stmts: Vec<Stmt>) -> Interpreter{
     let mut interpreter = Interpreter::new();
+    interpreter.load_library(aurora::interpreter::library::new_std());
 
     println!("--------- Running -------");
     for mut stmt in stmts.iter_mut(){

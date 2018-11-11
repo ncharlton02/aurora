@@ -7,9 +7,11 @@ use super::{data::*, error::LuaError};
 
 use self::function::{Function, FunctionDef, LuaFunc};
 use self::table::Table;
+use self::library::*;
 
 pub mod function;
 pub mod table;
+pub mod library;
 
 pub struct Interpreter{
     funcs: HashMap<i64, Function>,
@@ -25,7 +27,7 @@ pub struct Interpreter{
 impl Interpreter{
 
     pub fn new() -> Interpreter{
-        let mut interpreter = Interpreter {
+        Interpreter {
             funcs: HashMap::new(), 
             func_names: HashMap::new(), 
             func_count : 0,
@@ -34,47 +36,11 @@ impl Interpreter{
             globals: HashMap::new(),
             stack: vec![HashMap::new()],
             return_val: None,
-        };
+        }
+    }
 
-        interpreter.register_func("print".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
-            for arg in args{
-                print!("{}\t", arg);
-            }
-
-            println!();
-            Ok(None)
-        }));
-
-        interpreter.register_func("fail".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
-            if args.len() != 1{
-                return Err(error(format!("Expected one argument, found {}", args.len())));
-            }
-
-            let message = match args.get(0).unwrap(){
-                LuaData::Str(x) => x,
-                x => return Err(error(format!("Expected string, found {}", x)))
-            };
-
-            Err(error(format!("{}", message)))
-        }));
-
-        interpreter.register_func("require".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
-            if args.len() != 1{
-                return Err(error(format!("Expected one argument, found {}", args.len())));
-            }
-
-            let path = match args.get(0).unwrap(){
-                LuaData::Str(x) => x,
-                x => return Err(error(format!("Expected string, found {}", x)))
-            };
-
-            let src = load_file(path)?;
-            let module = load_module(src, interpreter)?;
-    
-            Ok(Some(module))
-        }));
-
-        interpreter
+    pub fn load_library<T: Library>(&mut self, lib: T){
+        lib.load(self);
     }
 
     pub fn register_func(&mut self, name: String, def: FunctionDef) -> i64{
@@ -467,8 +433,7 @@ impl Interpreter{
 
     fn load_module(&mut self, mut stmts: Vec<Stmt>) -> Result<LuaData, LuaError>{
         self.stack.push(HashMap::new());
-        //run code
-        //get return value
+
         for stmt in stmts.iter_mut(){
             self.run_stmt(stmt)?;
 
@@ -556,6 +521,7 @@ fn load_module(src: String, interpreter: &mut Interpreter) -> Result<LuaData, Lu
 
 pub fn run(stmts: &mut Vec<Stmt>) -> Result<Interpreter, LuaError>{
     let mut interpreter = Interpreter::new();
+    interpreter.load_library(library::new_std());
 
     for mut stmt in stmts.iter_mut(){
         match interpreter.run_stmt(&mut stmt){

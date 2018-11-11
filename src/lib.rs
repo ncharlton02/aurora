@@ -175,7 +175,10 @@ pub struct Aurora{
 impl Aurora{
     
     pub fn new(config: Config) -> Aurora{
-        Aurora{interpreter: Interpreter::new(), config: config}
+        let mut interpreter = Interpreter::new();
+
+        interpreter.load_library(interpreter::library::new_std());
+        Aurora{interpreter: interpreter, config: config}
     }
 
     pub fn register_function(&mut self, name: String, function: interpreter::function::FunctionDef){
