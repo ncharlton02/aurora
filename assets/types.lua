@@ -17,7 +17,7 @@ assert(x, 5)
 -- Tables are passed by reference
 x = {}
 y = x
-y.foo = 5
+y.foo = "Foo"
 print("TEST")
-assert(x.foo, 5)
+assert(x.foo, "Foo")
 

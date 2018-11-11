@@ -365,6 +365,7 @@ impl Interpreter{
     fn evaluate_bin_op(&mut self, operator: &BinOp, left: &Expr, right: &Expr) -> Result<LuaData, LuaError>{   
         Ok(match operator{
             BinOp::Concat => self.evaluate_str_binop(left, right)?,
+            BinOp::EqualEqual => self.evaluate_equallity_expr(left, right)?,
             _ => self.evaluate_num_binop(operator, left, right)?,
         })
     }
@@ -393,6 +394,13 @@ impl Interpreter{
         let right_string = self.expr_to_string(right)?;
 
         Ok(LuaData::Str(format!("{}{}", left_string, right_string)))
+    }
+
+    fn evaluate_equallity_expr(&mut self, left: &Expr, right: &Expr) -> Result<LuaData, LuaError>{
+        let left = self.evaluate_expr(left)?;
+        let right = self.evaluate_expr(right)?;
+
+        return Ok(LuaData::Bool(right.to_string() == left.to_string()));
     }
 
     fn expr_to_string(&mut self, expr: &Expr) -> Result<String, LuaError>{
