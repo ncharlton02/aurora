@@ -155,7 +155,7 @@ impl Parser{
 
             if let Some(token) = token{
                 match token{
-                    Token::Keyword(Keyword::If)  => level+=1,
+                    Token::Keyword(Keyword::If) | Token::Keyword(Keyword::While) => level+=1,
                     Token::Keyword(Keyword::End) => {
                         if level == 0{
                             break;

@@ -1,4 +1,6 @@
 -- Calculates the first 50 fibonacci numbers
+-- Note: To see a non-recursive version of this 
+-- check the loops.lua file!
 times = 50
 
 function fib(x, y, count)
