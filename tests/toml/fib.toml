@@ -1,7 +1,7 @@
 src="assets/fib.lua"
-tokens=76
+tokens=78
 statements=14
-line_count=17
+line_count=19
 
 [test_variables]
 names=["x"]
