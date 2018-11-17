@@ -43,7 +43,7 @@ impl Library for AuroraStdLib{
             };
 
             let src = load_file(path)?;
-            let module = load_module(src, interpreter)?;
+            let module = load_module(path.to_string(), src, interpreter)?;
     
             Ok(Some(module))
         }));

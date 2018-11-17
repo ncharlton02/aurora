@@ -1,7 +1,7 @@
 
 use std::io::prelude::*;
 use std::fs::File;
-use std::collections::{HashMap};
+use std::collections::{HashMap, HashSet};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::{data::*, error::LuaError};
 
@@ -17,6 +17,7 @@ pub struct Interpreter{
     funcs: HashMap<i64, Function>,
     func_names: HashMap<String, i64>,
     func_count: i64,
+    modules_loaded: HashSet<String>,
     tables: HashMap<i64, Table>,
     table_count: i64,
     globals: HashMap<String, LuaData>,
@@ -31,6 +32,7 @@ impl Interpreter{
             funcs: HashMap::new(), 
             func_names: HashMap::new(), 
             func_count : 0,
+            modules_loaded: HashSet::new(),
             tables: HashMap::new(),
             table_count: 0,
             globals: HashMap::new(),
@@ -431,7 +433,12 @@ impl Interpreter{
         Ok(data)
     }
 
-    fn load_module(&mut self, mut stmts: Vec<Stmt>) -> Result<LuaData, LuaError>{
+    pub fn load_module(&mut self, path: String, mut stmts: Vec<Stmt>) -> Result<LuaData, LuaError>{
+        if self.modules_loaded.contains(&path){
+            panic!("Module {} already loaded!", path);
+        }
+
+        self.modules_loaded.insert(path);
         self.stack.push(HashMap::new());
 
         for stmt in stmts.iter_mut(){
@@ -500,7 +507,7 @@ fn load_file(name: &str) -> Result<String, LuaError>{
     Ok(contents)
 }
 
-fn load_module(src: String, interpreter: &mut Interpreter) -> Result<LuaData, LuaError>{
+fn load_module(name: String, src: String, interpreter: &mut Interpreter) -> Result<LuaData, LuaError>{
     let tokens = match super::parser::scanner::scan(src){
         Ok(x) => x,
         Err(errors) => {
@@ -516,7 +523,7 @@ fn load_module(src: String, interpreter: &mut Interpreter) -> Result<LuaData, Lu
     };
     let stmts = super::parser::parse(tokens)?;
 
-    Ok(interpreter.load_module(stmts)?)
+    Ok(interpreter.load_module(name, stmts)?)
 }
 
 pub fn run(stmts: &mut Vec<Stmt>) -> Result<Interpreter, LuaError>{
