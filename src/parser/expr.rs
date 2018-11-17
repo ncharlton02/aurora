@@ -58,12 +58,14 @@ impl ExprParser{
     }
 
     fn scan_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
+
         if let Some(token) = self.peek(){
             if token == &Token::Newline || token == &Token::Semicolon{
                 return error("Expressions cannot have newlines or semicolons!".to_string(), self.line);
             }
         }else{
-            return Ok(Stmt {stmt_type: StmtType::EOF});
+            return Ok(Stmt {location, stmt_type: StmtType::EOF});
         }
 
         match self.expr_type{
@@ -76,9 +78,10 @@ impl ExprParser{
     fn scan_value(&mut self) -> Result<Stmt, LuaError>{
         let token = self.next_token().unwrap();
         let mut tokens = vec![token];
+        let location = format!("Line {}", self.line);
 
         if is_literal_value(&tokens[0]){
-            return Ok(Stmt{stmt_type: StmtType::Value(tokens)});
+            return Ok(Stmt{location, stmt_type: StmtType::Value(tokens)});
         }
 
         loop{
@@ -96,10 +99,11 @@ impl ExprParser{
             }
         }
 
-        Ok(Stmt{stmt_type: StmtType::Value(tokens)})
+        Ok(Stmt{location, stmt_type: StmtType::Value(tokens)})
     }
 
     fn scan_num_expr(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let (left, operator_token) = self.scan_until(|x| is_operator(x))?;
 
         let operator = match operator_token{
@@ -114,10 +118,11 @@ impl ExprParser{
             }
         })?.0;
 
-        Ok(Stmt{stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
+        Ok(Stmt{location, stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
     }
 
     fn scan_string_expr(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let (left, operator_token) = self.scan_until(|x| is_operator(x))?;
 
         let operator = match operator_token{
@@ -132,7 +137,7 @@ impl ExprParser{
             }
         })?.0;
 
-        Ok(Stmt{stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
+        Ok(Stmt{location, stmt_type: StmtType::BinOp(operator, parse(left, self.line)?, parse(right, self.line)?)})
     }
 
     fn scan_until<F>(&mut self, mut f: F) -> Result<(Vec<Token>, Token), LuaError> where F: FnMut(&Token) -> bool{

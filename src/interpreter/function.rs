@@ -18,7 +18,7 @@ impl LuaFunc{
 
     pub fn execute(&mut self, arg_data: Vec<LuaData>, interpreter: &mut Interpreter) -> Result<Option<LuaData>, LuaError>{
         if self.arg_defs.len() != arg_data.len(){
-            return Err(error(format!("Incorrect number of arguments found! Expected {} but found {}", self.arg_defs.len(), arg_data.len())));
+            return Err(interpreter.error(format!("Incorrect number of arguments found! Expected {} but found {}", self.arg_defs.len(), arg_data.len())));
         }
 
         self.add_args(interpreter, arg_data)?;
@@ -38,7 +38,7 @@ impl LuaFunc{
         for x in 0..self.arg_defs.len(){
             let name = match self.arg_defs.get(x).unwrap(){
                 Token::Identifier(x) => x,
-                x => return Err(error(format!("Expected identifier but found {:?}", x))),    
+                x => return Err(interpreter.error(format!("Expected identifier but found {:?}", x))),    
             }.to_string();
 
             interpreter.assign_variable(name, data.get(x).unwrap().clone(), true)?

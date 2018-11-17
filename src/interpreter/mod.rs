@@ -22,7 +22,8 @@ pub struct Interpreter{
     table_count: i64,
     globals: HashMap<String, LuaData>,
     stack: Vec<HashMap<String, LuaData>>,
-    return_val: Option<LuaData>
+    return_val: Option<LuaData>,
+    current_stmt_location: Option<String>
 }
 
 impl Interpreter{
@@ -38,6 +39,7 @@ impl Interpreter{
             globals: HashMap::new(),
             stack: vec![HashMap::new()],
             return_val: None,
+            current_stmt_location: None,
         }
     }
 
@@ -78,7 +80,7 @@ impl Interpreter{
                         panic!("Error: found invalid table id: {}", id);
                     }
                 }
-                x => return Err(error(format!("Expected table, found: {}", x))),
+                x => return Err(self.error(format!("Expected table, found: {}", x))),
             }
             
 
@@ -125,7 +127,7 @@ impl Interpreter{
                         panic!("Error: found invalid table id: {}", id);
                     }
                 }
-                x => Err(error(format!("Expected table found: {}", x)))
+                x => Err(self.error(format!("Expected table found: {}", x)))
             }
         }else{
             Ok(None)
@@ -167,7 +169,7 @@ impl Interpreter{
                     panic!("Error: found invalid table id: {}", id);
                 }
             },
-            x => Err(error(format!("Expected table found: {}", x)))
+            x => Err(self.error(format!("Expected table found: {}", x)))
         }
     }
     
@@ -175,6 +177,8 @@ impl Interpreter{
         if let Some(_) = self.return_val{
             return Ok(());
         }
+
+        self.current_stmt_location = Some(stmt.location.clone());
 
         match stmt.stmt_type{
             StmtType::FunctionDef(ref name, ref args, ref block) => self.handle_func_def(name, args, block),
@@ -201,7 +205,7 @@ impl Interpreter{
     fn handle_func_def(&mut self, name: &Token, args: &Vec<Token>, stmts: &Vec<Stmt>) -> Result<(), LuaError>{
         let name = match name{
             Token::Identifier(x) => x,
-            x => return Err(error(format!("Expected identifer but found {:?}", x))),
+            x => return Err(self.error(format!("Expected identifer but found {:?}", x))),
         };
 
         let func = LuaFunc::new(args.to_vec(), stmts.to_vec());
@@ -224,7 +228,7 @@ impl Interpreter{
                         panic!("Error: found invalid table id: {}", id);
                     }
                 },
-                x => return Err(error(format!("Expected table, found {:?}", x))),
+                x => return Err(self.error(format!("Expected table, found {:?}", x))),
             }
         }
 
@@ -264,7 +268,7 @@ impl Interpreter{
     fn handle_assignment(&mut self, name: &Token, expr: &Expr, is_local: bool) -> Result<(), LuaError>{
          let name = match name{
             Token::Identifier(n) => n,
-            _ => return Err(error(format!("Illegal Token: expected identifier but found {:?}", name))),
+            _ => return Err(self.error(format!("Illegal Token: expected identifier but found {:?}", name))),
         };
 
         let value = self.evaluate_expr(expr)?;
@@ -278,7 +282,7 @@ impl Interpreter{
         match stmt.stmt_type{
             StmtType::BinOp(ref operator, ref left, ref right) => Ok(self.evaluate_bin_op(operator, left, right)?),
             StmtType::Value(ref tokens) => Ok(self.evaluate_value_expr(tokens)?),
-            ref x => Err(error(format!("Couldn't evaluate expression: {:?}", x))),
+            ref x => Err(self.error(format!("Couldn't evaluate expression: {:?}", x))),
         }
     }
 
@@ -297,10 +301,10 @@ impl Interpreter{
                     if next == Some(&Token::RightBrace){
                         LuaData::Table(self.create_table())
                     }else{
-                        return Err(error(format!("Expected right curly brace but found: {:?}", next)))
+                        return Err(self.error(format!("Expected right curly brace but found: {:?}", next)))
                     }
                 }else{
-                    return Err(error(format!("Failed to parse value for left curly brace!")))
+                    return Err(self.error(format!("Failed to parse value for left curly brace!")))
                 }
             },
             Token::Identifier(x) => {
@@ -313,7 +317,7 @@ impl Interpreter{
 
                         match stmts.remove(0).stmt_type{
                             StmtType::FunctionCall(ref name, ref args) => self.run_function_call(name, args.to_vec())?,
-                            x => return Err(error(format!("Expected to find function but found {:?}", x))),
+                            x => return Err(self.error(format!("Expected to find function but found {:?}", x))),
                         }
                     },
                     None => {
@@ -323,10 +327,10 @@ impl Interpreter{
                             LuaData::Nil
                         }
                     },
-                    x => return Err(error(format!("Unexpected token: {:?}", x))),
+                    x => return Err(self.error(format!("Unexpected token: {:?}", x))),
                 }
             },
-            _ => return Err(error(format!("Illegal Token: {:?} isn't a value", first_token))),
+            _ => return Err(self.error(format!("Illegal Token: {:?} isn't a value", first_token))),
         })
     }
 
@@ -353,7 +357,7 @@ impl Interpreter{
             BinOp::GreaterThan => LuaData::Bool(left_num > right_num),
             BinOp::GreaterEqualThan => LuaData::Bool(left_num >= right_num),
             BinOp::EqualEqual => LuaData::Bool(left_num == right_num),
-            _ => return Err(error(format!("Unknown num operator: {:?}!", operator))),
+            _ => return Err(self.error(format!("Unknown num operator: {:?}!", operator))),
         })
     }
 
@@ -386,14 +390,14 @@ impl Interpreter{
     fn run_function_call(&mut self, name: &Token, args: Vec<Expr>) -> Result<LuaData, LuaError>{        
         let name = match name{
             Token::Identifier(string) => string,
-            _ => return Err(error(format!("Illegal Token: expected identifier but found {:?}", name))),
+            _ => return Err(self.error(format!("Illegal Token: expected identifier but found {:?}", name))),
         };
         
         let func_id = self.get_function_id_from_identifier(name)?;
         let arg_data = self.evaluate_args(args)?;
         let func = match self.funcs.get(&func_id){
             Some(x) => x,
-            None => return Err(error(format!("Unable to find function with name: {}", name))),   
+            None => return Err(self.error(format!("Unable to find function with name: {}", name))),   
         }.clone();
 
         self.stack.push(HashMap::new());
@@ -456,7 +460,15 @@ impl Interpreter{
 
         Ok(return_value)
     }
+
+    fn error(&self, message: String) -> LuaError{
+        LuaError::create_runtime(&message, self.current_stmt_location.clone())
+    }   
 }
+
+fn error(message: String, location: Option<String>) -> LuaError{
+        LuaError::create_runtime(&message, location)
+} 
 
 /// Splits a variable name multiple parts
 /// Ex: 'foo.bar.baz' returns ('foo.bar', 'baz')
@@ -486,22 +498,17 @@ pub fn split_name_path(input: String) -> (String, String){
     (path, variable)
 }
 
-
-fn error(message: String) -> LuaError{
-    LuaError::create_runtime(&message)
-}
-
 fn load_file(name: &str) -> Result<String, LuaError>{
     let path = format!("assets/{}.lua", name);
 
     let mut file = match File::open(&path){
         Ok(x) => x,
-        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e)))
+        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e), Some(name.to_string())))
     };
     let mut contents = String::new();
     match file.read_to_string(&mut contents){
         Ok(_) => (),
-        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e)))
+        Err(e) => return Err(error(format!("Failed to load file {}.lua: {}", name, e), Some(name.to_string())))
     }
     
     Ok(contents)
@@ -518,7 +525,7 @@ fn load_module(name: String, src: String, interpreter: &mut Interpreter) -> Resu
                 message.push_str("\n")
             }
 
-            return Err(error(message));
+            return Err(error(message, Some(name)));
         },
     };
     let stmts = super::parser::parse(tokens)?;

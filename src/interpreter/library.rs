@@ -19,27 +19,27 @@ impl Library for AuroraStdLib{
             Ok(None)
         }));
 
-        interpreter.register_func("fail".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+        interpreter.register_func("fail".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
             if args.len() != 1{
-                return Err(error(format!("Expected one argument, found {}", args.len())));
+                return Err(interpreter.error(format!("Expected one argument, found {}", args.len())));
             }
 
             let message = match args.get(0).unwrap(){
                 LuaData::Str(x) => x,
-                x => return Err(error(format!("Expected string, found {}", x)))
+                x => return Err(interpreter.error(format!("Expected string, found {}", x)))
             };
 
-            Err(error(format!("{}", message)))
+            Err(interpreter.error(format!("{}", message)))
         }));
 
         interpreter.register_func("require".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
             if args.len() != 1{
-                return Err(error(format!("Expected one argument, found {}", args.len())));
+                return Err(interpreter.error(format!("Expected one argument, found {}", args.len())));
             }
 
             let path = match args.get(0).unwrap(){
                 LuaData::Str(x) => x,
-                x => return Err(error(format!("Expected string, found {}", x)))
+                x => return Err(interpreter.error(format!("Expected string, found {}", x)))
             };
 
             let src = load_file(path)?;

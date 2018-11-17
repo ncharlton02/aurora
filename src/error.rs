@@ -45,8 +45,8 @@ impl LuaError{
         LuaError::create(message, ErrorType::Parse, location)
     }
 
-    pub fn create_runtime(message: &str) -> LuaError{
-        LuaError::create(message, ErrorType::Runtime, None)
+    pub fn create_runtime(message: &str, location: Option<String>) -> LuaError{
+        LuaError::create(message, ErrorType::Runtime, location)
     }
 
 }

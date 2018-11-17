@@ -42,9 +42,10 @@ impl Parser{
 
     fn scan_stmt(&mut self) -> Result<Stmt, LuaError>{
         let token = self.next_token();
+        let location = format!("Line {}", self.line);
 
         if token == None{
-            return Ok(Stmt {stmt_type: StmtType::EOF});
+            return Ok(Stmt {location, stmt_type: StmtType::EOF});
         }
 
         let token = token.unwrap();
@@ -62,29 +63,32 @@ impl Parser{
                 error(format!("Stmt's cannot start with {:?}", token), self.line)
             },
             Token::Semicolon | Token::Newline => self.scan_stmt(),
-            Token::EOF => return Ok(Stmt {stmt_type : StmtType::EOF}),
+            Token::EOF => return Ok(Stmt {location, stmt_type : StmtType::EOF}),
         }
     }
 
     fn handle_return_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let value_tokens = self.advance_to_mult(vec![Token::Newline, Token::Semicolon]);
 
         match expr::parse(value_tokens, self.line){
-            Ok(expr) => Ok(Stmt{stmt_type: StmtType::Return(expr)}),
+            Ok(expr) => Ok(Stmt{location, stmt_type: StmtType::Return(expr)}),
             Err(e) => Err(e)
         }
     }
 
     fn handle_while_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let expr_tokens = self.advance_to(Token::Keyword(Keyword::Do));
         let expr = expr::parse(expr_tokens, self.line)?;
         let block_tokens = self.advance_to_block_end();
         let block = parse(block_tokens)?;
 
-        Ok(Stmt{stmt_type : StmtType::While(expr, block)})
+        Ok(Stmt{location, stmt_type : StmtType::While(expr, block)})
     }
 
     fn handle_if_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let expr_tokens = self.advance_to(Token::Keyword(Keyword::Then));
         let expr = expr::parse(expr_tokens, self.line)?;
         let (block_tokens, block_end) = self.advance_to_if_end();
@@ -93,10 +97,10 @@ impl Parser{
         if block_end == Some(Keyword::Else) {
             let else_block_tokens = self.advance_to(Token::Keyword(Keyword::End));
 
-            return Ok(Stmt {stmt_type : StmtType::If(expr, block, Some(parse(else_block_tokens)?))})
+            return Ok(Stmt {location, stmt_type : StmtType::If(expr, block, Some(parse(else_block_tokens)?))})
         }
 
-        Ok(Stmt{stmt_type : StmtType::If(expr, block, None)})
+        Ok(Stmt{location, stmt_type : StmtType::If(expr, block, None)})
     }
 
     fn advance_to_if_end(&mut self) -> (Vec<Token>, Option<Keyword>){
@@ -123,6 +127,7 @@ impl Parser{
 
 
     fn handle_func_dec(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let name = match self.next_token(){
             Some(x) => x,
             None => return error(format!("Expected to find function name but found None"), self.line),
@@ -143,7 +148,7 @@ impl Parser{
         //Remove 'End'
         self.next_token();
 
-        Ok(Stmt{stmt_type : StmtType::FunctionDef(name, args, block)})
+        Ok(Stmt{location, stmt_type : StmtType::FunctionDef(name, args, block)})
     }
 
     fn advance_to_block_end(&mut self) -> Vec<Token>{
@@ -177,6 +182,7 @@ impl Parser{
 
     fn handle_indentifier(&mut self, token: Token) -> Result<Stmt, LuaError>{
         let following_token = self.next_token();
+        let location = format!("Line {}", self.line);
 
         if let Some(following_token) = following_token{
             match following_token{
@@ -184,7 +190,7 @@ impl Parser{
                     let args = self.advance_to_args_end();
                     let stmt_type = StmtType::FunctionCall(token, self.parse_args(args)?);
 
-                    Ok(Stmt {stmt_type})
+                    Ok(Stmt {location, stmt_type})
                 },
                 Token::Equal =>{
                   Ok(self.scan_assignment(token, false)?)
@@ -241,11 +247,12 @@ impl Parser{
     }
 
     fn scan_assignment(&mut self, name: Token, is_local: bool) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
         let tokens = self.advance_to_mult(vec![Token::Newline, Token::Semicolon]);
         let expr = expr::parse(tokens, self.line)?;
         let stmt_type = StmtType::Assignment(name, expr, is_local);
 
-        Ok(Stmt {stmt_type})
+        Ok(Stmt {location, stmt_type})
     }
 
     fn parse_args(&self, args: Vec<Token>) -> Result<Vec<Expr>, LuaError>{

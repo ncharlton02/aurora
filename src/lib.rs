@@ -93,6 +93,7 @@ impl Token{
 #[derive(Debug, PartialEq, Clone)]
 pub struct Stmt{
     stmt_type: StmtType,
+    location: String
 }
 
 #[derive(Debug, PartialEq, Clone)]
