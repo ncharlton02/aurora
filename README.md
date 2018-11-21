@@ -9,17 +9,18 @@ Aurora can run in two modes, file and console. File mode will run a file in the 
 
 To run file mode run:
 ```cmd
-$ cargo run -- file -f=basic
+$ cargo run --example=file -- -f=FILE_NAME_HERE
+$ cargo run --example=file -- -f=basic
 ```
 
 To run console mode run:
 ```
-$ cargo run -- console
+$ cargo run --example=console
 ```
 
 To see the tokens and the raw AST use the verbose flag:
 ```cmd
-$ cargo run -- -v file -f=basic
+$ cargo run --example=file -- -v -f=basic
 ```
 
 ## Features

@@ -8,10 +8,9 @@ license = "MIT"
 
 [dependencies]
 clap = "2.32.0"
-linefeed = "0.5"
-
 
 [dev-dependencies]
 toml = "0.4"
 serde = "1.0"
 serde_derive = "1.0"
+linefeed = "0.5"
