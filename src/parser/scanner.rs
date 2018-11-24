@@ -233,7 +233,7 @@ impl Scanner{
     fn scan_identifier(&mut self) -> Result<Token, LuaError>{
         let mut char_vec: Vec<char> = vec![self.char_at(self.curr - 1).unwrap()];
         let stop_chars = vec![Some(' '), Some('\n'), Some('\t'), Some('('), 
-            Some(')'), Some(','), Some('\r'), Some(';')];
+            Some(')'), Some(','), Some('\r'), Some(';'), Some('=')];
 
         loop{
             if stop_chars.contains(&self.peek()){

@@ -1,5 +1,5 @@
 
-use super::{Interpreter, error};
+use super::{Interpreter};
 use super::super::{Token, Stmt, data::LuaData, error::LuaError};
 
 type RustFunc = fn(Vec<LuaData>, &mut Interpreter) -> Result<Option<LuaData>, LuaError>;

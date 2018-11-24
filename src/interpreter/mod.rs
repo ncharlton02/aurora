@@ -187,6 +187,7 @@ impl Interpreter{
             StmtType::BinOp(_, _, _) | StmtType::Value(_) => panic!("Illegal Root Stmt: {:?}", stmt),
             StmtType::Return(ref expr) => self.handle_return(expr),
             StmtType::While(ref expr, ref mut stmts) => self.run_while_loop(expr, stmts),
+            StmtType::For(ref name, ref init_val, ref end_val, ref incr, ref mut block) => self.run_for_loop(name, init_val, end_val, incr, block),
             StmtType::FunctionCall(ref name, ref args) => {
                 match self.run_function_call(name, args.to_vec()){
                     Ok(_) => Ok(()),
@@ -233,6 +234,43 @@ impl Interpreter{
         }
 
         Ok(())
+    }
+
+    fn run_for_loop(&mut self, variable_name: &Token, init_val: &Expr, end_val: &Expr, incr: &Expr, block: &mut Vec<Stmt>) -> Result<(), LuaError>{
+        let name = match variable_name{
+            Token::Identifier(string) => string,
+            _ => return Err(self.error(format!("Illegal Token: expected identifier but found {:?}", variable_name))),
+        }.to_string();
+
+        let init_val = self.evaluate_expr(init_val)?;
+        let end_val = self.evaluate_expr(end_val)?;
+        let incr = self.expr_to_num(incr)?;
+        self.assign_variable(name.to_string(), init_val, true)?;
+        
+        while !self.check_for_loop(&name, &end_val)?{
+            for stmt in block.iter_mut(){
+                self.run_stmt(stmt)?;
+            }
+
+            self.handle_for_incr(&name, incr)?;
+        }
+        
+        Ok(())
+    }
+
+    fn handle_for_incr(&mut self, var_name: &String, incr: f64) -> Result<(), LuaError>{
+        let curr_var = self.get_variable(var_name.to_string())?.unwrap_or(&LuaData::Nil).clone();
+
+        let new_value = curr_var.to_num() + incr;
+        self.assign_variable(var_name.to_string(), LuaData::Number(new_value), true)?;
+
+        Ok(())
+    }
+
+    fn check_for_loop(&mut self, var_name: &String, end_val: &LuaData) -> Result<bool, LuaError>{
+        let curr_var = self.get_variable(var_name.to_string())?.unwrap_or(&LuaData::Nil).clone();
+
+        Ok(curr_var == *end_val)
     }
 
     fn run_while_loop(&mut self, expr: &Expr, stmts: &mut Vec<Stmt>) -> Result<(), LuaError>{

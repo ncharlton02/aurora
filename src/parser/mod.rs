@@ -57,6 +57,7 @@ impl Parser{
             Token::Keyword(Keyword::Function) => self.handle_func_dec(),
             Token::Keyword(Keyword::Return) => self.handle_return_stmt(),
             Token::Keyword(Keyword::While) => self.handle_while_stmt(),
+            Token::Keyword(Keyword::For) => self.handle_for_stmt(),
             Token::LeftParenthesis | Token::RightParenthesis | Token::StringLiteral(_) | 
             Token::Operator(_) | Token::NumberLiteral(_) | Token::Comma | Token::Keyword(_) |
             Token::LeftBrace | Token::RightBrace | Token::Equal =>{ 
@@ -75,6 +76,26 @@ impl Parser{
             Ok(expr) => Ok(Stmt{location, stmt_type: StmtType::Return(expr)}),
             Err(e) => Err(e)
         }
+    }
+
+    fn handle_for_stmt(&mut self) -> Result<Stmt, LuaError>{
+        let location = format!("Line {}", self.line);
+
+        let var_name = if let Some(x) = self.next_token(){
+            x
+        }else{
+            return error("Expected identifier but found none!".to_string(), self.line);
+        };
+
+        self.next_token(); // Remove equal sign
+
+        let start_expr = expr::parse(self.advance_to(Token::Comma), self.line)?;
+        let end_expr = expr::parse(self.advance_to(Token::Comma), self.line)?;
+        let increment_expr = expr::parse(self.advance_to(Token::Keyword(Keyword::Do)), self.line)?;
+        let block_tokens = self.advance_to_block_end();
+        let block = parse(block_tokens)?;
+
+        Ok(Stmt{location, stmt_type : StmtType::For(var_name, start_expr, end_expr, increment_expr, block)})
     }
 
     fn handle_while_stmt(&mut self) -> Result<Stmt, LuaError>{

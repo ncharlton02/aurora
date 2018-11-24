@@ -34,6 +34,7 @@ isn't supported. See below for the currently supported and planned features.
 - Basic arithmetic
 - Functions
 - While loops
+- For loops
 - Local variables
 - Basic error messages with line numbers
 - Tables
@@ -41,7 +42,7 @@ isn't supported. See below for the currently supported and planned features.
 
 ### Planned features
 - Rust/Lua interops
-- For loops
+- For in loops
 - A std library
 - Order of Operations
 - Library to run files 
