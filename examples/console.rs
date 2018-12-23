@@ -3,52 +3,22 @@ extern crate clap;
 extern crate linefeed;
 
 use std::io;
-use std::io::prelude::*;
-use std::fs::File;
-use clap::{Arg, App, SubCommand, ArgMatches};
+use clap::{App};
 use linefeed::{Interface, ReadResult};
 use aurora::interpreter::{Interpreter, function::FunctionDef};
 use aurora::parser;
 use aurora::error::LuaError;
-use aurora::config::{LogLevel, Config};
 use aurora::data::LuaData;
-use aurora::Aurora;
 
 
 fn main() {
-    let matches = App::new("aurora")
+    App::new("aurora")
         .version("0.1.0")
         .author("Noah Charlton <ncharlton002@gmail.com>")
-        .about("Lua interpreter written in pure rust")
-        .arg(Arg::with_name("verbose")
-            .help("Sets the log level to verbose")
-            .short("v")
-            .long("verbose")
-            .conflicts_with("quiet"))
-        .arg(Arg::with_name("quiet")
-            .help("Sets the log level to quiet")
-            .short("q")
-            .long("quiet")
-            .conflicts_with("verbose"))
-        .get_matches();
-
-    let config = create_config(&matches);
+        .about("Lua interpreter written in pure rust");
 
     run_console().expect("Failed to run console!");
 }
-
-fn create_config(matches: &ArgMatches) -> Config{
-    let log_level = if matches.is_present("verbose"){
-        LogLevel::Verbose
-    }else if matches.is_present("quiet"){
-        LogLevel::Quiet
-    }else{
-        LogLevel::Normal
-    };
-    
-    Config::new(log_level)
-}
-
 
 fn run_console() -> io::Result<()>{
     let mut intepreter = create_console_interpreter();

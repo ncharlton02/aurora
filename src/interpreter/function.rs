@@ -1,6 +1,6 @@
 
 use super::{Interpreter};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use super::super::{Token, Stmt, data::LuaData, error::LuaError};
 
 type RustFunc = fn(Vec<LuaData>, &mut Interpreter) -> Result<Option<LuaData>, LuaError>;

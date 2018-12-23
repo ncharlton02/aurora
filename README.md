@@ -23,6 +23,8 @@ To see the tokens and the raw AST use the verbose flag:
 $ cargo run --example=file -- -v -f=basic
 ```
 
+**Note**: Flags do not work in the console version!
+
 ## Features
 Aurora is currently a WIP. Lots of the lua language
 isn't supported. See below for the currently supported and planned features.

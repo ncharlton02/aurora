@@ -8,8 +8,8 @@ use aurora::interpreter::*;
 #[should_panic]
 fn duplicate_load_modules_fails_test() {
     let mut interpreter = Interpreter::new();
-    interpreter.load_module("foo".to_string(), Vec::new());
-    interpreter.load_module("foo".to_string(), Vec::new());
+    interpreter.load_module("foo".to_string(), Vec::new()).unwrap();
+    interpreter.load_module("foo".to_string(), Vec::new()).unwrap();
 }
 
 #[test]
