@@ -187,7 +187,7 @@ impl Aurora{
     }
 
     pub fn register_function(&mut self, name: String, function: interpreter::function::FunctionDef){
-        self.interpreter.register_func(name, function);
+        self.interpreter.func_manager.register_func(name, function);
     }
 
     pub fn run(&mut self, src: String) -> Result<(), Vec<LuaError>>{

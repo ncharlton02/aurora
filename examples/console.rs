@@ -73,7 +73,7 @@ fn run_console() -> io::Result<()>{
 fn create_console_interpreter() -> Interpreter{
     let mut intepreter = Interpreter::new();
 
-    intepreter.register_func("quit".to_string(), FunctionDef::Rust(|_, _| -> Result<Option<LuaData>, LuaError>{
+    intepreter.func_manager.register_func("quit".to_string(), FunctionDef::Rust(|_, _| -> Result<Option<LuaData>, LuaError>{
         ::std::process::exit(0);
     }));
 

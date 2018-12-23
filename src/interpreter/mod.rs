@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use super::{Token, Stmt, StmtType, Expr, BinOp, Keyword, parser};
 use super::{data::*, error::LuaError};
 
-use self::function::{Function, FunctionDef, LuaFunc};
+use self::function::*;
 use self::table::Table;
 use self::library::*;
 
@@ -14,9 +14,7 @@ pub mod table;
 pub mod library;
 
 pub struct Interpreter{
-    funcs: HashMap<i64, Function>,
-    func_names: HashMap<String, i64>,
-    func_count: i64,
+    pub func_manager : FunctionManager,
     modules_loaded: HashSet<String>,
     tables: HashMap<i64, Table>,
     table_count: i64,
@@ -30,9 +28,7 @@ impl Interpreter{
 
     pub fn new() -> Interpreter{
         Interpreter {
-            funcs: HashMap::new(), 
-            func_names: HashMap::new(), 
-            func_count : 0,
+            func_manager: FunctionManager::new(),
             modules_loaded: HashSet::new(),
             tables: HashMap::new(),
             table_count: 0,
@@ -45,15 +41,6 @@ impl Interpreter{
 
     pub fn load_library<T: Library>(&mut self, lib: T){
         lib.load(self);
-    }
-
-    pub fn register_func(&mut self, name: String, def: FunctionDef) -> i64{
-        let id = self.func_count;
-        self.func_count += 1;
-        self.func_names.insert(name, id);
-        self.funcs.insert(id, function::create_function(id, def));
-
-        id
     }
 
     fn create_table(&mut self) -> i64{
@@ -211,7 +198,7 @@ impl Interpreter{
 
         let func = LuaFunc::new(args.to_vec(), stmts.to_vec());
 
-        let id = self.register_func(name.to_string(), FunctionDef::Lua(func));
+        let id = self.func_manager.register_func(name.to_string(), FunctionDef::Lua(func));
 
         if name.contains('.'){
             let (path, variable_name) = split_name_path(name.to_string());
@@ -433,7 +420,7 @@ impl Interpreter{
         
         let func_id = self.get_function_id_from_identifier(name)?;
         let arg_data = self.evaluate_args(args)?;
-        let func = match self.funcs.get(&func_id){
+        let func = match self.func_manager.get_func(func_id){
             Some(x) => x,
             None => return Err(self.error(format!("Unable to find function with name: {}", name))),   
         }.clone();
@@ -461,7 +448,7 @@ impl Interpreter{
                 Ok(-1)
             }
         }else{
-            Ok(*self.func_names.get(id).unwrap_or(&-1))
+            Ok(self.func_manager.get_func_id(id))
         }
     }
 

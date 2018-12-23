@@ -10,7 +10,7 @@ pub struct AuroraStdLib{}
 impl Library for AuroraStdLib{
 
     fn load(&self, interpreter: &mut Interpreter){
-        interpreter.register_func("print".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
+        interpreter.func_manager.register_func("print".to_string(), FunctionDef::Rust(|args, _| -> Result<Option<LuaData>, LuaError>{
             for arg in args{
                 print!("{}\t", arg);
             }
@@ -19,7 +19,7 @@ impl Library for AuroraStdLib{
             Ok(None)
         }));
 
-        interpreter.register_func("fail".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
+        interpreter.func_manager.register_func("fail".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
             if args.len() != 1{
                 return Err(interpreter.error(format!("Expected one argument, found {}", args.len())));
             }
@@ -32,7 +32,7 @@ impl Library for AuroraStdLib{
             Err(interpreter.error(format!("{}", message)))
         }));
 
-        interpreter.register_func("require".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
+        interpreter.func_manager.register_func("require".to_string(), FunctionDef::Rust(|args, interpreter| -> Result<Option<LuaData>, LuaError>{
             if args.len() != 1{
                 return Err(interpreter.error(format!("Expected one argument, found {}", args.len())));
             }

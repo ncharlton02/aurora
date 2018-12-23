@@ -1,5 +1,6 @@
 
 use super::{Interpreter};
+use std::collections::{HashMap, HashSet};
 use super::super::{Token, Stmt, data::LuaData, error::LuaError};
 
 type RustFunc = fn(Vec<LuaData>, &mut Interpreter) -> Result<Option<LuaData>, LuaError>;
@@ -62,4 +63,43 @@ pub struct Function{
 
 pub fn create_function(id: i64, def: FunctionDef) -> Function{
     Function{def, id}
+}
+
+///
+/// Function Containers
+/// 
+
+pub struct FunctionManager{
+    funcs: HashMap<i64, Function>,
+    func_names: HashMap<String, i64>,
+    func_count: i64,
+}
+
+impl FunctionManager{
+    
+    pub fn new() -> FunctionManager{
+        FunctionManager{
+            funcs: HashMap::new(), 
+            func_names: HashMap::new(), 
+            func_count : 0,
+        }
+    }
+
+    pub fn register_func(&mut self, name: String, def: FunctionDef) -> i64{
+        let id = self.func_count;
+        self.func_count += 1;
+        self.func_names.insert(name, id);
+        self.funcs.insert(id, create_function(id, def));
+
+        id
+    }
+
+    pub fn get_func_id(&self, name: &str) -> i64{
+        *self.func_names.get(name).unwrap_or(&-1)
+    }
+
+    pub fn get_func(&self, id: i64) -> Option<&Function>{
+        self.funcs.get(&id)
+    }
+
 }
